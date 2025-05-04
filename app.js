@@ -7,6 +7,8 @@ const connectDB = require('./config/mongoose')
 const bodyParser = require("body-parser");
 const app = express();
 const helmet = require('helmet');
+const userRoute = require('./routes/userRoute')
+const cookieParser = require("cookie-parser");
 
 
 connectDB()
@@ -48,12 +50,13 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
-app.use(cors({ origin: '*' })); 
+app.use(cors(corsOptions)); 
 app.use(express.json({ limit: "10mb" })); 
 app.use(express.urlencoded({ limit: "10mb", extended: true })); 
+app.use(cookieParser());
 app.use(bodyParser.json()); 
 
-app.use('/',()=>console.log('/ -route'))
+app.use('/api',userRoute)
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
