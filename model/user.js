@@ -1,19 +1,30 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-
 const userSchema= new Schema({
-    email : {
+    email: {
         type : String,
         unique : true,
         index : true,
         required : true
     },
-    phone : {
+    phone: {
         type : String,
         unique : true,
         index : true,
         required : true
+    },
+    totalBalance: {
+        type : Number,
+        default : 0
+    },
+    avalableBalance: {
+        type : Number,
+        default : 0
+    },
+    processing: {
+        type  : Number,
+        default : 0
     },
     currentToken: { 
         type: String 
@@ -24,5 +35,5 @@ const userSchema= new Schema({
     }
 )
 
-const userModel = mongoose.model('user', userSchema);
+const userModel = mongoose.model('users', userSchema);
 module.exports = userModel;

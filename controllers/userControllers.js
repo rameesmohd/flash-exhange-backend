@@ -1,7 +1,7 @@
 const userModel = require('../model/user')
-
+const depositModel = require('../model/deposit')
 const jwt = require('jsonwebtoken');
-
+const generateSixDigitId = require('../utility/generateSixDigitId')
 const JWT_SECRET = process.env.JWT_SECRET || "dfdsfh3434dfsd343";
 const JWT_EXPIRES_IN = "1d";
 
@@ -30,11 +30,11 @@ const signup = async (req, res) => {
         .cookie("token", token, {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          sameSite: "Strict",
+          sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         })
         .status(200)
-        .json({ success: true, message: "Logged in successfully" });
+        .json({ success: true, message: "Logged in successfully", user });
     } catch (err) {
       console.error(err);
       res.status(500).json({ success: false, message: "Server error" });
@@ -53,11 +53,54 @@ const logout = async (req, res) => {
       
       res.clearCookie("token").status(200).json({ success: true, message: "Logged out" });
     } catch (err) {
-      return res.status(400).json({ message: "Invalid request" });
+      return res.status(400).json({success: false, message: "Invalid request" });
     }
 };
 
+const generateUniqueTransactionId = async () => {
+  let unique = false;
+  let transactionId = '';
+
+  while (!unique) {
+    transactionId = generateSixDigitId();
+    const existing = await depositModel.findOne({ transactionId });
+
+    if (!existing) {
+      unique = true;
+    }
+  }
+
+  return transactionId;
+};
+
+const createDeposit =async(req,res)=>{
+  try {
+    const { amount } = req.body
+    const user = req.user
+
+    if(!user || !amount){
+      return res.status(400).json({success: false, message: "Invalid request" });
+    }
+
+    const transaction_id = generateUniqueTransactionId()
+
+    const newDeposit = new depositModel({
+      userId : user._id,
+      amount,
+      transactionId : `${transaction_id}`
+    })
+
+    await newDeposit.save()
+
+    res.status(201).json({success:true,message : "deposit created succesfully", deposit:newDeposit})
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ success : false,message: "Server error" });
+  }
+}
+
 module.exports={
     signup,
-    logout
+    logout,
+    createDeposit
 }

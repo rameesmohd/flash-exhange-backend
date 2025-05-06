@@ -9,7 +9,6 @@ const  verifyUser = async(req, res, next) => {
 
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = await userModel.findById(decoded.userId);
-    console.log(user , "middleware");
     
     if (!user || user.currentToken !== token) {
       return res.status(401).json({ message: "Session expired or invalid" });
@@ -17,10 +16,14 @@ const  verifyUser = async(req, res, next) => {
 
     req.user = user;
     next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid token" });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      console.log('TokenExpiredError');
+      return res.status(401).json({ message: 'Authentication failed: Token has expired.' });
+    }
+    return res.status(401).json({ message: 'Authentication failed: something went error' });
   }
-};
+}
 
 module.exports = {
   verifyUser
