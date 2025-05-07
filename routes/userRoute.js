@@ -4,7 +4,7 @@ const {
     signup,
     logout,
     createDeposit
-} = require('../controllers/userControllers')
+} = require('../controllers/userController')
 const { verifyUser } = require('../middleware/userAuth')
 
 router.post('/signup',signup)

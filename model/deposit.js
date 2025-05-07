@@ -13,7 +13,7 @@ const depositSchema= new Schema({
     },
     status : {
         type : String,
-        enum : ["pending","proccessing","success","failed"],
+        enum : ["pending","proccessing","success","failed","dispute"],
         default : "pending"
     },
     txid : {
@@ -28,7 +28,7 @@ const depositSchema= new Schema({
         type : String,
         required : true
     }
-}, 
+    }, 
     {
         timestamps: true,
     }
