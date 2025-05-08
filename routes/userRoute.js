@@ -5,7 +5,12 @@ const {
     logout,
     createDeposit
 } = require('../controllers/userController')
-const { verifyUser } = require('../middleware/userAuth')
+const { verifyUser } = require('../middleware/userAuth');
+const { 
+    verifyPayment, 
+    fetchMainAddress, 
+    fetchDepositHistory 
+} = require('../controllers/paymentController');
 
 router.post('/signup',signup)
 
@@ -18,7 +23,10 @@ router.get('/auth/verify', (req, res) => {
 
 router.route('/deposit')
     .post(createDeposit)
-  
+    .patch(verifyPayment)
+
+router.get('/address',fetchMainAddress)
+router.get('/deposit-history',fetchDepositHistory)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 router.post("/logout", logout);
 

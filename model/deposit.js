@@ -17,7 +17,9 @@ const depositSchema= new Schema({
         default : "pending"
     },
     txid : {
-        type : String
+        type : String,
+        unique : true,
+        sparse: true
     },
     amount: { 
         type: Number, 

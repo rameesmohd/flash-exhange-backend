@@ -82,7 +82,7 @@ const createDeposit =async(req,res)=>{
       return res.status(400).json({success: false, message: "Invalid request" });
     }
 
-    const transaction_id = generateUniqueTransactionId()
+    const transaction_id = await generateUniqueTransactionId()
 
     const newDeposit = new depositModel({
       userId : user._id,
@@ -98,8 +98,6 @@ const createDeposit =async(req,res)=>{
     return res.status(500).json({ success : false,message: "Server error" });
   }
 }
-
-
 
 module.exports={
     signup,
