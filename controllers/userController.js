@@ -1,7 +1,6 @@
 const userModel = require('../model/user')
 const depositModel = require('../model/deposit')
 const jwt = require('jsonwebtoken');
-const generateSixDigitId = require('../utility/generateSixDigitId')
 const JWT_SECRET = process.env.JWT_SECRET || "dfdsfh3434dfsd343";
 const JWT_EXPIRES_IN = "1d";
 
@@ -57,50 +56,8 @@ const logout = async (req, res) => {
     }
 };
 
-const generateUniqueTransactionId = async () => {
-  let unique = false;
-  let transactionId = '';
-
-  while (!unique) {
-    transactionId = generateSixDigitId();
-    const existing = await depositModel.findOne({ transactionId });
-
-    if (!existing) {
-      unique = true;
-    }
-  }
-
-  return transactionId;
-};
-
-const createDeposit =async(req,res)=>{
-  try {
-    const { amount } = req.body
-    const user = req.user
-
-    if(!user || !amount){
-      return res.status(400).json({success: false, message: "Invalid request" });
-    }
-
-    const transaction_id = await generateUniqueTransactionId()
-
-    const newDeposit = new depositModel({
-      userId : user._id,
-      amount,
-      transactionId : `${transaction_id}`
-    })
-
-    await newDeposit.save()
-
-    res.status(201).json({success:true,message : "deposit created succesfully", deposit:newDeposit})
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ success : false,message: "Server error" });
-  }
-}
-
 module.exports={
     signup,
     logout,
-    createDeposit
+    
 }

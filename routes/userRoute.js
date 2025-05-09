@@ -3,13 +3,15 @@ const router = express.Router();
 const {
     signup,
     logout,
-    createDeposit
 } = require('../controllers/userController')
 const { verifyUser } = require('../middleware/userAuth');
 const { 
     verifyPayment, 
     fetchMainAddress, 
-    fetchDepositHistory 
+    fetchDepositHistory, 
+    createDeposit,
+    fetchAddress,
+    saveAddress
 } = require('../controllers/paymentController');
 
 router.post('/signup',signup)
@@ -21,13 +23,19 @@ router.get('/auth/verify', (req, res) => {
     return res.status(200).json({ authenticated: true, user: req.user });
 });
 
-router.route('/deposit')
-    .post(createDeposit)
-    .patch(verifyPayment)
+router.get('/main-address',fetchMainAddress)
 
-router.get('/address',fetchMainAddress)
-router.get('/deposit-history',fetchDepositHistory)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+router.route('/deposit')
+      .get(fetchDepositHistory)
+      .post(createDeposit)
+      .patch(verifyPayment)
+
+router.route('/address')
+      .get(fetchAddress)
+      .post(saveAddress)
+
+      
+      
 router.post("/logout", logout);
 
 module.exports=router

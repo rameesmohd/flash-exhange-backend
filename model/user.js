@@ -26,6 +26,10 @@ const userSchema= new Schema({
         type  : Number,
         default : 0
     },
+    disputeAmount  :{
+        type : Number,
+        default  :0
+    },
     currentToken: { 
         type: String 
     }, // Token Version
