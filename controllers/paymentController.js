@@ -1,6 +1,7 @@
 const addressModel = require("../model/address");
 const depositModel = require("../model/deposit")
-const userModel = require('../model/user')
+const userModel = require('../model/user');
+const withdrawModel = require("../model/withdraw");
 const generateSixDigitId = require('../utility/generateSixDigitId')
 const  TronWeb  = require('tronweb');
 const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
@@ -18,7 +19,7 @@ const initializeUsdtContract = async (tronWebInstance) => {
     return await tronWebInstance.contract().at(USDT_CONTRACT_ADDRESS);
 };
 
-const generateUniqueTransactionId = async () => {
+const generateUniqueDepositTransactionId = async () => {
 let unique = false;
 let transactionId = '';
 
@@ -44,7 +45,7 @@ const createDeposit =async(req,res)=>{
         return res.status(400).json({success: false, message: "Invalid request" });
         }
 
-        const transaction_id = await generateUniqueTransactionId()
+        const transaction_id = await generateUniqueDepositTransactionId()
 
         const newDeposit = new depositModel({
         userId : user._id,
@@ -115,9 +116,20 @@ const verifyPayment=async(req,res)=>{
         );
 
         if(isValid){
-           await depositModel.updateOne({_id : id},{$set : {txid,status:"success"}})
-           await userModel.updateOne({_id : user._id},{$inc:{totalBalance : amount}}) 
-           return res.status(200).json({success : true,message : "Deposit added successfully"})
+        await depositModel.updateOne({_id : id},{$set : {txid,status:"success"}})
+        
+        const newTotal = Math.round((user.totalBalance + amount) * 100) / 100;
+        const newAvailable = Math.round((newTotal - user.processing - user.disputeAmount) * 100) / 100;
+
+        await userModel.updateOne(
+        { _id: user._id },
+        {
+            $set: {
+            totalBalance: newTotal,
+            availableBalance: newAvailable }
+        });
+          
+        return res.status(200).json({success : true,message : "Deposit added successfully"})
         } else {
             if(toAddress != expectedToAddress){
                 return res.status(400).json({success : false,message : "Wrong destination"})
@@ -194,11 +206,77 @@ const fetchAddress=async(req,res)=>{
     }
 }
 
+const generateUniqueWithdrawTransactionId = async () => {
+    let unique = false;
+    let transactionId = '';
+    
+    while (!unique) {
+        transactionId = generateSixDigitId();
+        const existing = await withdrawModel.findOne({ transactionId });
+    
+        if (!existing) {
+            unique = true;
+        }
+    }
+    
+    return transactionId;
+    };
+
+const submitWithdraw=async(req,res)=>{
+    try {
+        const { amount,addressId } = req.body
+        const user = req.user
+        
+        const address = await addressModel.findOne({_id : addressId,userId:user._id})
+        
+        if(!address){
+            return res.status(200).json({success : false,message : "Invalid reciever address"})
+        }
+
+        if(amount > user.avalableBalance){
+            return res.status(200).json({success : false,message : "Insufficient available balance"})
+        }
+
+        const newTransactionId = await generateUniqueWithdrawTransactionId()
+        const newWithdraw = new withdrawModel({
+            userId : user._id,
+            amount ,
+            recieveAddress : address.address,
+            transactionId : newTransactionId
+        })
+        await newWithdraw.save()
+
+        return res.status(200).json({success: true,message : "Withdraw submited successfully",withdraw:newWithdraw})
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({success: false , message : "Server error"})
+    }
+}
+
+const fetchWithdrawHistory=async(req,res)=>{
+    try {
+        const user = req.user
+        const withdraws = await withdrawModel.find({userId : user._id})
+        return res.status(200).json({success : true,withdraws})
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json({success: false , message : "Server error"})
+    }
+}
+
 module.exports ={
+    fetchMainAddress,
+
+    // Deposit
     createDeposit,
     verifyPayment,
-    fetchMainAddress,
     fetchDepositHistory,
+
+    //Address
     saveAddress,
-    fetchAddress
+    fetchAddress,
+
+    //Withdraw
+    submitWithdraw,
+    fetchWithdrawHistory
 }

@@ -16,19 +16,23 @@ const userSchema= new Schema({
     },
     totalBalance: {
         type : Number,
-        default : 0
+        default : 0,
+        min: 0
     },
-    avalableBalance: {
+    availableBalance: {
         type : Number,
-        default : 0
+        default : 0,
+        min: 0
     },
     processing: {
         type  : Number,
-        default : 0
+        default : 0,
+        min: 0
     },
     disputeAmount  :{
         type : Number,
-        default  :0
+        default  :0,
+        min: 0
     },
     currentToken: { 
         type: String 

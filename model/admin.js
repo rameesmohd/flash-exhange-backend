@@ -30,6 +30,9 @@ const adminSchema= new Schema({
     },
     mainAddress : {
         type : String
+    },
+    networkFee : {
+        type: Number
     }
     }, 
     {

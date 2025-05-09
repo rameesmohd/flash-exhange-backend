@@ -1,6 +1,7 @@
 const userModel = require('../model/user')
 const depositModel = require('../model/deposit')
 const jwt = require('jsonwebtoken');
+const bankCardModel = require('../model/bankCard');
 const JWT_SECRET = process.env.JWT_SECRET || "dfdsfh3434dfsd343";
 const JWT_EXPIRES_IN = "1d";
 
@@ -56,8 +57,39 @@ const logout = async (req, res) => {
     }
 };
 
+const addBankCard=async(req,res)=>{
+  try {
+    const { accountNumber,ifsc,accountName} = req.body
+    const user =  req.user
+    const newBankCard = new bankCardModel({
+      userId : user._id,
+      accountNumber,
+      ifsc,
+      accountName
+    })
+    await newBankCard.save()
+    return res.status(200).json({success: true,message : "Bank card added successfully"})
+  } catch (error) {
+    console.log(error);
+    return res.status(400).json({success: false, message: "Server error" });
+  }
+}
+
+const fetchBankCards=async(req,res)=>{
+  try {
+    const user = req.user
+    const bankCards = await bankCardModel.find({userId :user._id })
+    res.status(200).json({success: true,bankCards})
+  } catch (error) {
+    console.log(error);
+    return res.status(400).json({success: false, message: "Server error" });
+  }
+}
+
 module.exports={
     signup,
     logout,
-    
+
+    addBankCard,
+    fetchBankCards
 }
