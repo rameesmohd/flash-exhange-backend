@@ -4,7 +4,8 @@ const { Schema } = mongoose;
 const bankCardSchema= new Schema({
     userId : {
         type: Schema.Types.ObjectId, 
-        ref : "users"
+        ref : "users",
+        index: true
     },
     accountNumber : {
         type: String,

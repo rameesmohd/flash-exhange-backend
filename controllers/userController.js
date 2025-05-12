@@ -59,6 +59,8 @@ const logout = async (req, res) => {
 
 const addBankCard=async(req,res)=>{
   try {
+    console.log(req.body);
+    
     const { accountNumber,ifsc,accountName} = req.body
     const user =  req.user
     const newBankCard = new bankCardModel({
@@ -86,10 +88,36 @@ const fetchBankCards=async(req,res)=>{
   }
 }
 
+const deleteBankCard = async (req, res) => {
+  try {
+    const user = req.user;
+    const { id } = req.query;
+    console.log(req.query);
+    
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Card ID is required" });
+    }
+
+    const bankCard = await bankCardModel.findOneAndDelete({ _id: id, userId: user._id });
+
+    if (!bankCard) {
+      return res.status(404).json({ success: false, message: "Bank card not found or already deleted" });
+    }
+    const bankCards = await bankCardModel.find({userId :user._id })
+    return res.status(200).json({ success: true, message: "Bank card deleted successfully" ,bankCards});
+
+  } catch (error) {
+    console.error("Error deleting bank card:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
 module.exports={
     signup,
     logout,
 
     addBankCard,
-    fetchBankCards
+    fetchBankCards,
+    deleteBankCard
 }

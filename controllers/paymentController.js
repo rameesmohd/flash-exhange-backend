@@ -233,7 +233,7 @@ const submitWithdraw=async(req,res)=>{
             return res.status(200).json({success : false,message : "Invalid reciever address"})
         }
 
-        if(amount > user.avalableBalance){
+        if(amount > user.availableBalance){
             return res.status(200).json({success : false,message : "Insufficient available balance"})
         }
 

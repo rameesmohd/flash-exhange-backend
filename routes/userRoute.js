@@ -1,10 +1,13 @@
 const express = require('express')
 const router = express.Router();
+const { verifyUser } = require('../middleware/userAuth');
 const {
     signup,
     logout,
+    addBankCard,
+    fetchBankCards,
+    deleteBankCard,
 } = require('../controllers/userController')
-const { verifyUser } = require('../middleware/userAuth');
 const { 
     verifyPayment, 
     fetchMainAddress, 
@@ -15,6 +18,11 @@ const {
     submitWithdraw,
     fetchWithdrawHistory
 } = require('../controllers/paymentController');
+const { 
+    fetchFunds, 
+    createOrder, 
+    fetchOrders
+} = require('../controllers/orderController');
 
 router.post('/signup',signup)
 
@@ -40,7 +48,17 @@ router.route('/address')
       .get(fetchAddress)
       .post(saveAddress)
 
+router.route('/bank-card')
+      .get(fetchBankCards)   
+      .post(addBankCard)  
+      .delete(deleteBankCard) 
+
+router.route('/fund')
+      .get(fetchFunds)
       
+router.route('/order')
+      .get(fetchOrders)
+      .post(createOrder)
       
 router.post("/logout", logout);
 
