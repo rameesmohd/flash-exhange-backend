@@ -224,9 +224,9 @@ const generateUniqueWithdrawTransactionId = async () => {
 
 const submitWithdraw=async(req,res)=>{
     try {
-        const { amount,addressId } = req.body
+        const { addressId } = req.body
+        const amount = Number(req.body.amount)
         const user = req.user
-        
         const address = await addressModel.findOne({_id : addressId,userId:user._id})
         
         if(!address){
@@ -244,9 +244,24 @@ const submitWithdraw=async(req,res)=>{
             recieveAddress : address.address,
             transactionId : newTransactionId
         })
+        const availableBalance = user.availableBalance-amount
+        const processing = user.processing + amount
+        const totalBalance = availableBalance+processing
+        const updatedUser = await userModel.findOneAndUpdate(
+            { _id: user._id },
+            {
+                $set: {
+                totalBalance,
+                processing,
+                availableBalance
+                }
+            },
+            {
+                new: true // returns the updated document
+            }
+        );
         await newWithdraw.save()
-
-        return res.status(200).json({success: true,message : "Withdraw submited successfully",withdraw:newWithdraw})
+        return res.status(200).json({success: true,message : "Withdraw submited successfully",withdraw:newWithdraw,user:updatedUser})
     } catch (error) {
         console.log(error)
         return res.status(500).json({success: false , message : "Server error"})

@@ -33,7 +33,18 @@ const adminSchema= new Schema({
     },
     networkFee : {
         type: Number
-    }
+    },
+    otherExchangeRates: [
+        {
+          binance: {
+            type: String,
+          },
+          lastUpdated: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+    ],
     }, 
     {
         timestamps: true,

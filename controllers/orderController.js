@@ -3,11 +3,15 @@ const orderModel = require('../model/order')
 const bankCardModel = require('../model/bankCard')
 const userModel = require('../model/user')
 const generateSixDigitId = require('../utility/generateSixDigitId')
+const { getP2pPrices } = require('../utility/updateP2pPrices')
+const adminModel = require('../model/admin')
 
 const fetchFunds=async(req,res)=>{
     try {   
         const funds = await fundModel.find({})
-        return res.status(200).json({success: true, funds:funds[0]})
+        const otherExchangeRates = await adminModel.findOne({},{otherExchangeRates:1})
+        
+        return res.status(200).json({success: true, funds:funds[0] ,otherExchangeRates: otherExchangeRates.otherExchangeRates})
     } catch (error) {
         console.log(error);
         res.status(500).json({success : false,message : "Server error"})
@@ -61,12 +65,26 @@ const createOrder=async(req,res)=>{
                 ifsc : isBankCardExist.ifsc
             }
         })
-
-        const processing = user.processing+usdt;
-        const available = user.totalBalance-processing;
-        await userModel.updateOne({_id : user._id},{$set:{processing,availableBalance:available}})
+        console.log(user);
+        
+        const processing = user.processing + Number(usdt);
+        const availableBalance = user.availableBalance-Number(usdt);
+        const totalBalance = availableBalance+processing
+        const updatedUser = await userModel.findOneAndUpdate(
+            { _id: user._id },
+            {
+              $set: {
+                totalBalance,
+                processing,
+                availableBalance
+              }
+            },
+            {
+              new: true // returns the updated document
+            }
+        );
         await newOrder.save()
-        return res.status(200).json({success: true,message:"Order created successfully"})
+        return res.status(200).json({success: true,message:"Order created successfully",user : updatedUser})
     } catch (error) {
         console.log(error);
         res.status(500).json({success : false,message : "Server error"})

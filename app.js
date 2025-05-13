@@ -9,6 +9,7 @@ const app = express();
 const helmet = require('helmet');
 const userRoute = require('./routes/userRoute')
 const cookieParser = require("cookie-parser");
+const { getP2pPrices } = require('./utility/updateP2pPrices');
 
 
 connectDB()
@@ -57,6 +58,9 @@ app.use(cookieParser());
 app.use(bodyParser.json()); 
 
 app.use('/api',userRoute)
+
+console.log(getP2pPrices());
+
 
 app.use((err, req, res, next) => {
     console.error(err.stack);
