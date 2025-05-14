@@ -14,6 +14,9 @@ const userSchema= new Schema({
         index : true,
         required : true
     },
+    transactionPass : {
+        type : String
+    },
     totalBalance: {
         type : Number,
         default : 0,

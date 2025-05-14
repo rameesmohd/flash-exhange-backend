@@ -24,6 +24,14 @@ const adminSchema= new Schema({
         type : Number,
         default : 0
     },
+    totalCompletedOrders :{
+        type : Number,
+        default : 0
+    },
+    totalCompletedOrdersAmount :{
+        type : Number,
+        default : 0
+    },
     totalFundsInOrder: {
         type : Number,
         default :0

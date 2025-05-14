@@ -59,9 +59,6 @@ app.use(bodyParser.json());
 
 app.use('/api',userRoute)
 
-console.log(getP2pPrices());
-
-
 app.use((err, req, res, next) => {
     console.error(err.stack);
     if (err.message === 'Not allowed by CORS') {

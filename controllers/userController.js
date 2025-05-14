@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const bankCardModel = require('../model/bankCard');
 const JWT_SECRET = process.env.JWT_SECRET || "dfdsfh3434dfsd343";
 const JWT_EXPIRES_IN = "1d";
+const bcrypt = require("bcrypt");
+const otpModel = require('../model/otp');
 
 const createToken = (userId) => {
     return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -112,6 +114,95 @@ const deleteBankCard = async (req, res) => {
   }
 };
 
+const sendOTP = async(req,res)=>{
+  try {
+    const user = req.user
+    const OTP = Math.floor(100000 + Math.random() * 900000);
+
+    const newOtp = new otpModel({
+      user : user._id,
+      otp : OTP,
+    })
+    await newOtp.save()
+    
+    return res.status(200).json({
+      otpId : newOtp._id,
+      success: true,
+      message: "Otp sent successfully" 
+    });
+  } catch (error) {
+    console.error("Error deleting bank card:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+const setupTransPass = async (req, res) => {
+  try {
+    const user = req.user;
+    const { newPin, otpId, OTP } = req.body;
+    console.log(req.body);
+    
+    // Validate input
+    if (!newPin) {
+      return res.status(400).json({ success: false, message: "Transaction PIN is required." });
+    }
+
+    if (!otpId || !OTP) {
+      return res.status(400).json({ success: false, message: "OTP verification failed. Please retry." });
+    }
+
+    // Verify OTP
+    const otpRecord = await otpModel.findOne({ _id: otpId, otp: OTP });
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: "Invalid OTP credentials." });
+    }
+
+    // Hash and update transaction password
+    const hashedPin = await bcrypt.hash(newPin, 10);
+    await userModel.updateOne(
+      { _id: user._id },
+      { $set: { transactionPass: hashedPin } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Transaction PIN updated successfully.",
+    });
+
+  } catch (error) {
+    console.error("Error in setupTransPass:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error. Please try again later.",
+    });
+  }
+};
+
+
+const validateTransPass=async(req,res)=>{
+  try {
+    const { pass } = req.body
+    const user = req.user;
+
+    if (!pass) {
+      return res.status(400).json({ success: false, message: "New password required" });
+    }
+
+    if(!user.transactionPass){
+      return res.status(400).json({success : false,message : "Please update your transaction password"})
+    }
+
+    const isMatch = await bcrypt.compare(password, user.transactionPass);
+
+    if(isMatch){
+        return res.status(200).json({success:true,message : "Matched successfully"})
+    } else {
+        return res.status(400).json({success:true,message : "Incurrect password"})
+    }
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+}
 
 module.exports={
     signup,
@@ -119,5 +210,8 @@ module.exports={
 
     addBankCard,
     fetchBankCards,
-    deleteBankCard
+    deleteBankCard,
+
+    sendOTP,
+    setupTransPass
 }

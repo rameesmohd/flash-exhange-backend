@@ -7,6 +7,8 @@ const {
     addBankCard,
     fetchBankCards,
     deleteBankCard,
+    sendOTP,
+    setupTransPass,
 } = require('../controllers/userController')
 const { 
     verifyPayment, 
@@ -59,6 +61,12 @@ router.route('/fund')
 router.route('/order')
       .get(fetchOrders)
       .post(createOrder)
+
+router.get('/send-otp',sendOTP)
+
+router.route('/verify')
+      .post(setupTransPass)
+      
       
 router.post("/logout", logout);
 
