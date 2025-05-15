@@ -64,9 +64,8 @@ router.route('/order')
 
 router.get('/send-otp',sendOTP)
 
-router.route('/verify')
+router.route('/reset-pin')
       .post(setupTransPass)
-      
       
 router.post("/logout", logout);
 

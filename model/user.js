@@ -14,7 +14,7 @@ const userSchema= new Schema({
         index : true,
         required : true
     },
-    transactionPass : {
+    transactionPin : {
         type : String
     },
     totalBalance: {

@@ -5,13 +5,14 @@ const userModel = require('../model/user')
 const generateSixDigitId = require('../utility/generateSixDigitId')
 const { getP2pPrices } = require('../utility/updateP2pPrices')
 const adminModel = require('../model/admin')
+const { validateTransPass } = require('./userController')
 
 const fetchFunds=async(req,res)=>{
     try {   
         const funds = await fundModel.find({})
         const otherExchangeRates = await adminModel.findOne({},{otherExchangeRates:1})
         
-        return res.status(200).json({success: true, funds:funds[0] ,otherExchangeRates: otherExchangeRates.otherExchangeRates})
+        return res.status(200).json({success: true, funds:funds ,otherExchangeRates: otherExchangeRates.otherExchangeRates})
     } catch (error) {
         console.log(error);
         res.status(500).json({success : false,message : "Server error"})
@@ -36,6 +37,12 @@ const generateUniqueWithdrawTransactionId = async () => {
 
 const createOrder=async(req,res)=>{
     try {
+        
+        const validation = await validateTransPass(req);
+        if (!validation.success) {
+            return res.status(validation.status).json({ success: false, message: validation.message });
+        }
+
         const { usdt,fiat,fund,bankCard }=req.body
         const user = req.user
         
@@ -56,6 +63,7 @@ const createOrder=async(req,res)=>{
         const orderId = await generateUniqueWithdrawTransactionId()
         const newOrder = new orderModel({
             userId : user._id,
+            fund : isFundValid._id,
             usdt,
             fiat,
             orderId,

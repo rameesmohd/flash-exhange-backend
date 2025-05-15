@@ -161,7 +161,7 @@ const setupTransPass = async (req, res) => {
     const hashedPin = await bcrypt.hash(newPin, 10);
     await userModel.updateOne(
       { _id: user._id },
-      { $set: { transactionPass: hashedPin } }
+      { $set: { transactionPin: hashedPin } }
     );
 
     return res.status(200).json({
@@ -179,30 +179,31 @@ const setupTransPass = async (req, res) => {
 };
 
 
-const validateTransPass=async(req,res)=>{
+const validateTransPass = async (req) => {
   try {
-    const { pass } = req.body
+    const { pin } = req.body;
     const user = req.user;
 
-    if (!pass) {
-      return res.status(400).json({ success: false, message: "New password required" });
+    if (!pin) {
+      return { success: false, status: 400, message: "Transaction pin required" };
     }
 
-    if(!user.transactionPass){
-      return res.status(400).json({success : false,message : "Please update your transaction password"})
+    if (!user.transactionPin) {
+      return { success: false, status: 400, message: "Please update your transaction pin" };
     }
 
-    const isMatch = await bcrypt.compare(password, user.transactionPass);
+    const isMatch = await bcrypt.compare(pin, user.transactionPin);
 
-    if(isMatch){
-        return res.status(200).json({success:true,message : "Matched successfully"})
+    if (isMatch) {
+      return { success: true };
     } else {
-        return res.status(400).json({success:true,message : "Incurrect password"})
+      return { success: false, status: 400, message: "Incorrect PIN " };
     }
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Server error" });
+    return { success: false, status: 500, message: "Server error" };
   }
-}
+};
+
 
 module.exports={
     signup,
@@ -213,5 +214,6 @@ module.exports={
     deleteBankCard,
 
     sendOTP,
-    setupTransPass
+    setupTransPass,
+    validateTransPass
 }

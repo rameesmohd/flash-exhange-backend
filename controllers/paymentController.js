@@ -4,6 +4,7 @@ const userModel = require('../model/user');
 const withdrawModel = require("../model/withdraw");
 const generateSixDigitId = require('../utility/generateSixDigitId')
 const  TronWeb  = require('tronweb');
+const { validateTransPass } = require("./userController");
 const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
 // Function to create a new TronWeb instance
@@ -224,11 +225,17 @@ const generateUniqueWithdrawTransactionId = async () => {
 
 const submitWithdraw=async(req,res)=>{
     try {
+        const validation = await validateTransPass(req);
+        if (!validation.success) {
+            return res.status(validation.status).json({ success: false, message: validation.message });
+        }
+        
         const { addressId } = req.body
         const amount = Number(req.body.amount)
         const user = req.user
         const address = await addressModel.findOne({_id : addressId,userId:user._id})
         
+
         if(!address){
             return res.status(200).json({success : false,message : "Invalid reciever address"})
         }
@@ -257,7 +264,8 @@ const submitWithdraw=async(req,res)=>{
                 }
             },
             {
-                new: true // returns the updated document
+                new: true ,
+                fields: { transactionPassword: 0 },
             }
         );
         await newWithdraw.save()
