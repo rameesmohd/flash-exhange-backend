@@ -1,14 +1,13 @@
 const cron = require("node-cron");
-const depositModel = require("../model/deposit"); // adjust path as needed
-const companyAddressesModel = require("../model/companyAddress"); // adjust path as needed
+const depositModel = require("../model/deposit");
+const companyAddressesModel = require("../model/companyAddress");
 
-// Runs every minute
 cron.schedule("* * * * *", async () => {
   console.log("CRON: Checking for expired deposits...");
+
   const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
 
   try {
-    // Find expired pending deposits
     const expiredDeposits = await depositModel.find({
       status: "pending",
       createdAt: { $lte: twentyMinutesAgo }
@@ -16,14 +15,12 @@ cron.schedule("* * * * *", async () => {
 
     if (expiredDeposits.length === 0) return;
 
-    // Update their status to "failed"
     const ids = expiredDeposits.map(dep => dep._id);
     await depositModel.updateMany(
       { _id: { $in: ids } },
       { $set: { status: "failed" } }
     );
 
-    // Unlock associated addresses
     const addressIds = expiredDeposits.map(dep => dep.recieveAddress);
     await companyAddressesModel.updateMany(
       { _id: { $in: addressIds } },
@@ -34,4 +31,7 @@ cron.schedule("* * * * *", async () => {
   } catch (err) {
     console.error("Cron error:", err);
   }
+}, {
+  scheduled: true,
+  timezone: "UTC"
 });
