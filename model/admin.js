@@ -53,6 +53,16 @@ const adminSchema= new Schema({
           },
         },
     ],
+    companyAddresses:[
+        {
+            address : {
+                type: String
+            },
+            priority : {
+                type : Number
+            }
+        }
+    ]
     }, 
     {
         timestamps: true,

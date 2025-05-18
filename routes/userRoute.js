@@ -35,8 +35,6 @@ router.get('/auth/verify', (req, res) => {
     return res.status(200).json({ authenticated: true, user: req.user });
 });
 
-router.get('/main-address',fetchMainAddress)
-
 router.route('/deposit')
       .get(fetchDepositHistory)
       .post(createDeposit)

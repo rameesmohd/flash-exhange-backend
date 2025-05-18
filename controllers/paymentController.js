@@ -5,6 +5,7 @@ const withdrawModel = require("../model/withdraw");
 const generateSixDigitId = require('../utility/generateSixDigitId')
 const  TronWeb  = require('tronweb');
 const { validateTransPass } = require("./userController");
+const companyAddressesModel = require("../model/companyAddress");
 const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
 // Function to create a new TronWeb instance
@@ -37,31 +38,61 @@ return transactionId;
 };
 
 
-const createDeposit =async(req,res)=>{
-    try {
-        const { amount } = req.body
-        const user = req.user
+const createDeposit = async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const user = req.user;
 
-        if(!user || !amount){
-        return res.status(400).json({success: false, message: "Invalid request" });
-        }
-
-        const transaction_id = await generateUniqueDepositTransactionId()
-
-        const newDeposit = new depositModel({
-        userId : user._id,
-        amount,
-        transactionId : `${transaction_id}`
-        })
-
-        await newDeposit.save()
-
-        res.status(201).json({success:true,message : "deposit created succesfully", deposit:newDeposit})
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ success : false,message: "Server error" });
+    if (!user || !amount) {
+      return res.status(400).json({ success: false, message: "Invalid request" });
     }
-}
+
+    const transaction_id = await generateUniqueDepositTransactionId();
+
+    // Atomically pick and lock an available address
+    const availableAddress = await companyAddressesModel.findOneAndUpdate(
+      {
+        flag: false
+      },
+      {
+        $set: { flag: true } 
+      },
+      {
+        sort: { priority: 1 }, 
+        new: true 
+      }
+    );
+
+    console.log(availableAddress);
+    
+
+    if (!availableAddress) {
+      return res.status(400).json({ success: false, message: "No available address for deposit" });
+    }
+
+    const newDeposit = new depositModel({
+      userId: user._id,
+      amount,
+      transactionId: transaction_id,
+      recieveAddress: availableAddress._id
+    });
+
+    await newDeposit.save();
+
+    // Populate the recieveAddress field
+    const populatedDeposit = await depositModel.findById(newDeposit._id).populate("recieveAddress");
+
+    return res.status(201).json({
+    success: true,
+    message: "Deposit created successfully",
+    deposit: populatedDeposit
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
 
 //text - 4,403 txid = 1ffc3f46f92b577f6c6d62ba7a4a4f79e098d69b0b02a59a361541aeeff62fb5
 
@@ -159,7 +190,7 @@ const fetchMainAddress=async(req,res)=>{
 const fetchDepositHistory=async(req,res)=>{
     try {
         const user = req.user
-        const deposits = await depositModel.find({userId: user._id})
+        const deposits = await depositModel.find({userId: user._id}).populate("recieveAddress");
         res.status(200).json({success : true,deposits})
     } catch (error) {
         console.log(error);

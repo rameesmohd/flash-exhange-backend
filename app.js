@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
 dotenv.config();
 const cors = require('cors');
+const cron = require("node-cron");
 const connectDB = require('./config/mongoose')
 const bodyParser = require("body-parser");
 const app = express();
@@ -56,6 +57,8 @@ app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true })); 
 app.use(cookieParser());
 app.use(bodyParser.json()); 
+
+require('./cron-jobs/cron')
 
 app.use('/api',userRoute)
 

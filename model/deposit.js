@@ -30,6 +30,10 @@ const depositSchema= new Schema({
     transactionId : {
         type : String,
         required : true
+    },
+    recieveAddress  :{
+        type : Schema.Types.ObjectId, 
+        ref : "company-address"
     }
     }, 
     {
