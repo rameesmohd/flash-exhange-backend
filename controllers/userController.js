@@ -11,18 +11,53 @@ const createToken = (userId) => {
     return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
   };
 
+const generateUniqueInviteCode = async () => {
+  let codeExists = true;
+  let inviteCode = '';
+
+  while (codeExists) {
+    inviteCode  = Math.floor(1000000 + Math.random() * 9000000).toString(); // 7-digit number
+    const existing = await userModel.findOne({ inviteCode  });
+    if (!existing) {
+      codeExists = false;
+    }
+  }
+
+  return inviteCode;
+};
+
 const signup = async (req, res) => {
     try {
-      const { email, phone } = req.body;
+      const { email, phone ,referralCode } = req.body;
       console.log(req.body);
     
       let user = await userModel.findOne({ email });
-
+      
       if (!user) {
-        user = new userModel({ email, phone });
+        console.log('aaaaaaaaaa');
+        
+        const inviteCode = await generateUniqueInviteCode();
+        console.log(inviteCode);
+
+        let referrer = null;
+        if (referralCode) {
+          const refUser = await userModel.findOne({ referralCode });
+          if (refUser) {
+            referrer = refUser._id;
+          }
+        }
+        
+        
+        user = new userModel({
+          email,
+          phone,
+          inviteCode,
+          referrer
+        });
+
         await user.save();
       }
-  
+
       // Invalidate existing session
       const token = createToken(user._id);
       user.currentToken = token;

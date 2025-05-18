@@ -37,6 +37,16 @@ const userSchema= new Schema({
         default  :0,
         min: 0
     },
+    referrer: {
+        type: Schema.Types.ObjectId,
+        ref: "users",
+        default: null,
+    },
+    inviteCode : {
+        type : String,
+        required : true,
+        unique : true
+    },
     currentToken: { 
         type: String 
     }, // Token Version
