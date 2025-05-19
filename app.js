@@ -35,7 +35,12 @@ app.use(helmet({
 
 app.set('trust proxy', 1);
 
-const allowedOrigins = ["http://localhost:5173","http://localhost:3001","http://localhost:4173"];
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3001",
+  "http://localhost:4173",
+  "flash-exchange-frontend.vercel.app",
+];
 
 const corsOptions = {
   origin: (origin, callback) => {
