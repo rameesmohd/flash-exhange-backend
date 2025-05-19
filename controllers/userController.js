@@ -26,6 +26,40 @@ const generateUniqueInviteCode = async () => {
   return inviteCode;
 };
 
+const signin = async (req, res) => {
+    try {
+      const { email, otp } = req.body;
+      console.log(req.body);
+    
+      let user = await userModel.findOne({ email });
+      
+      if (!user) {
+        return res.status(400).json({
+          message: "User not found. Please sign up to proceed",
+          success: false
+        });
+      }
+
+      // Invalidate existing session
+      const token = createToken(user._id);
+      user.currentToken = token;
+      await user.save();
+  
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        })
+        .status(200)
+        .json({ success: true, message: "Logged in successfully", user });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
 const signup = async (req, res) => {
     try {
       const { email, phone ,referralCode } = req.body;
@@ -46,7 +80,6 @@ const signup = async (req, res) => {
             referrer = refUser._id;
           }
         }
-        
         
         user = new userModel({
           email,
@@ -80,6 +113,8 @@ const signup = async (req, res) => {
 
 const logout = async (req, res) => {
     try {
+      console.log("req.cookies.token" ,req.cookies.token);
+      
       const token = req.cookies.token;
       const decoded = jwt.verify(token, JWT_SECRET);
       const user = await userModel.findById(decoded.userId);
@@ -242,6 +277,7 @@ const validateTransPass = async (req) => {
 
 module.exports={
     signup,
+    signin,
     logout,
 
     addBankCard,

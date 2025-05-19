@@ -9,6 +9,7 @@ const {
     deleteBankCard,
     sendOTP,
     setupTransPass,
+    signin,
 } = require('../controllers/userController')
 const { 
     verifyPayment, 
@@ -27,6 +28,8 @@ const {
 } = require('../controllers/orderController');
 
 router.post('/signup',signup)
+router.post('/signin',signin)
+
 
 router.use(verifyUser)
 
@@ -65,6 +68,6 @@ router.get('/send-otp',sendOTP)
 router.route('/reset-pin')
       .post(setupTransPass)
       
-router.post("/logout", logout);
+router.get("/logout", logout);
 
 module.exports=router
