@@ -7,13 +7,13 @@ const {
     addBankCard,
     fetchBankCards,
     deleteBankCard,
-    sendOTP,
+    sendOTPResetTrans,
     setupTransPass,
     signin,
+    sendOtpSignup,
 } = require('../controllers/userController')
 const { 
     verifyPayment, 
-    fetchMainAddress, 
     fetchDepositHistory, 
     createDeposit,
     fetchAddress,
@@ -30,6 +30,10 @@ const {
 router.post('/signup',signup)
 router.post('/signin',signin)
 
+
+router.route('/send-otp')
+      .get(verifyUser,sendOTPResetTrans)
+      .post(sendOtpSignup) 
 
 router.use(verifyUser)
 
@@ -63,11 +67,9 @@ router.route('/order')
       .get(fetchOrders)
       .post(createOrder)
 
-router.get('/send-otp',sendOTP)
-
 router.route('/reset-pin')
       .post(setupTransPass)
       
-router.get("/logout", logout);
+router.post("/logout", logout);
 
 module.exports=router

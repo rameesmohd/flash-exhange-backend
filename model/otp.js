@@ -3,10 +3,10 @@ const { Schema } = mongoose;
 
 const otpSchema = new Schema(
   {
-    user: { 
-      type: Schema.Types.ObjectId, 
-      ref: 'users', 
-      index: true 
+    email : { 
+      type: String, 
+      index: true,
+      sparse : true
     },
     otp: {
       type: String,

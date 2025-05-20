@@ -42,7 +42,7 @@ const userSchema= new Schema({
         ref: "users",
         default: null,
     },
-    inviteCode : {
+    referralCode : {
         type : String,
         required : true,
         unique : true
