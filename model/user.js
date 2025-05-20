@@ -47,6 +47,22 @@ const userSchema= new Schema({
         required : true,
         unique : true
     },
+    totalReferralCommission : {
+        type : Number,
+        default : 0
+    },
+    totalReferrals : {
+        levelOne : {
+            type : Number,
+            default : 0,
+            min  : 0
+        },
+        levelTwo : {
+            type: Number,
+            default : 0,
+            min  :0
+        }
+    },
     currentToken: { 
         type: String 
     }, // Token Version

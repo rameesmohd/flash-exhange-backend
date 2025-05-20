@@ -7,11 +7,12 @@ const JWT_EXPIRES_IN = "1d";
 const bcrypt = require("bcrypt");
 const otpModel = require('../model/otp');
 const { Resend } = require("resend");
+const referralModel = require('../model/referrals');
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 
 const createToken = (userId) => {
     return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-  };
+};
 
 const generateUniqueInviteCode = async () => {
   let codeExists = true;
@@ -50,25 +51,52 @@ const signup = async (req, res) => {
 
     const newReferralCode = await generateUniqueInviteCode();
 
-    let referrer = null;
+    let refUserId = null;
+    let refUser = null
     if (referralCode) {
-      const refUser = await userModel.findOne({ referralCode });
+      refUser = await userModel.findOne({ referralCode });
       if (refUser) {
-        referrer = refUser._id;
+        refUserId = refUser._id;
       }
     }
-
+    
     user = new userModel({
       email,
       phone,
       referralCode: newReferralCode,
-      referrer,
+      referrer:refUserId,
     });
-
+    
     const token = createToken(user._id);
     user.currentToken = token;
-
+    
     await user.save();
+    
+    // Save referral Level 1 
+    if (refUser) {
+      await userModel.findByIdAndUpdate(
+        refUser._id,
+          { $inc: { 'totalReferrals.levelOne': 1 } }
+      );
+      await referralModel.create({
+        referredBy: refUser._id,
+        referee: user._id,
+        level: "Level 1",
+      });
+
+    // Level 2 if refUser also has a referrer
+    if (refUser.referrer) {
+      await userModel.findByIdAndUpdate(
+        refUser.referrer,
+        { $inc: { 'totalReferrals.levelTwo': 1 } },
+      );
+      await referralModel.create({
+        referredBy: refUser.referrer,
+        referee: user._id,
+        referredVia: refUser._id,
+        level: "Level 2",
+      });
+    }}
 
     res
       .cookie("token", token, {
@@ -325,8 +353,6 @@ const validateTransPass = async (req) => {
   }
 };
 
-
-
 const sendOtpSignup = async (req, res) => {
   try {
     const { email } = req.body;
@@ -345,28 +371,32 @@ const sendOtpSignup = async (req, res) => {
 
     await newOtp.save()
 
-    try {
-      await resend.emails.send({
-        from: process.env.NOREPLY_WEBSITE_MAIL,
-        to: email,
-        subject: 'Email Verification - E Value Trade',
-        html: `
-          <div style="font-family: sans-serif; padding: 10px;">
-            <h2 style="color: #333;">Your Verification Code</h2>
-            <p>Use the OTP below to verify your email:</p>
-            <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
-            <p>This code will expire in 10 minutes.</p>
-            <br/>
-            <p>Thanks,<br/>E Value Trade Team</p>
-          </div>
-        `,
-      });
-    } catch (emailError) {
-      console.error('Error sending email:', emailError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send verification email. Please try again.',
-      });
+    if (process.env.NODE_ENV === "production") {
+      try {
+        await resend.emails.send({
+          from: process.env.NOREPLY_WEBSITE_MAIL,
+          to: email,
+          subject: 'Email Verification - E Value Trade',
+          html: `
+            <div style="font-family: sans-serif; padding: 10px;">
+              <h2 style="color: #333;">Your Verification Code</h2>
+              <p>Use the OTP below to verify your email:</p>
+              <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
+              <p>This code will expire in 10 minutes.</p>
+              <br/>
+              <p>Thanks,<br/>E Value Trade Team</p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send verification email. Please try again.',
+        });
+      }
+    } else {
+      console.log(`Development Mode: OTP for ${email} is ${OTP}`);
     }
 
     return res.status(200).json({

@@ -30,6 +30,7 @@ const {
 router.post('/signup',signup)
 router.post('/signin',signin)
 
+router.post("/logout", logout);
 
 router.route('/send-otp')
       .get(verifyUser,sendOTPResetTrans)
@@ -70,6 +71,5 @@ router.route('/order')
 router.route('/reset-pin')
       .post(setupTransPass)
       
-router.post("/logout", logout);
 
 module.exports=router
