@@ -140,18 +140,18 @@ const signin = async (req, res) => {
     await user.save();
 
     res
-      .cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      })
-      .status(200)
-      .json({
-        success: true,
-        message: "Logged in successfully",
-        user
-      });
+    .cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "Strict" : "Lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    })
+    .status(200)
+    .json({
+      success: true,
+      message: "Logged in successfully",
+      user
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
@@ -409,10 +409,28 @@ const sendOtpSignup = async (req, res) => {
     console.error('OTP send error:', error);
     return res.status(500).json({
       success: false,
-      msg: 'Server error while sending OTP. Please try again later.',
+      message: 'Server error while sending OTP. Please try again later.',
     });
   }
 };
+
+const getReferrals=async(req,res)=>{
+  try {
+    const user = req.user
+    const referrals = await referralModel.find({ referredBy: user._id })
+    .populate({ path: 'referee', select: 'email' });
+
+    return res.status(200).json({ 
+      success: true,
+      referrals
+    })
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while sending OTP. Please try again later.',
+    });
+  }
+}
 
 module.exports={
     signup,
@@ -426,5 +444,7 @@ module.exports={
 
     sendOTPResetTrans,
     setupTransPass,
-    validateTransPass
+    validateTransPass,
+
+    getReferrals
 }

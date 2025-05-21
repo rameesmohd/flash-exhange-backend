@@ -11,6 +11,7 @@ const {
     setupTransPass,
     signin,
     sendOtpSignup,
+    getReferrals,
 } = require('../controllers/userController')
 const { 
     verifyPayment, 
@@ -70,6 +71,9 @@ router.route('/order')
 
 router.route('/reset-pin')
       .post(setupTransPass)
-      
+
+router.route('/referrals')
+      .get(getReferrals)
+
 
 module.exports=router
