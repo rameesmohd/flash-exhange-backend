@@ -1,6 +1,5 @@
 const express = require('express');
 const dotenv = require('dotenv');
-const envFile = `.env.${process.env.NODE_ENV || 'development'}`;
 dotenv.config();
 const cors = require('cors');
 const cron = require("node-cron");
@@ -43,7 +42,8 @@ const allowedOrigins = [
 ];
 
 const corsOptions = {
-  origin: (origin, callback) => {
+   origin: (origin, callback) => {
+    console.log("Incoming origin:", origin);
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
