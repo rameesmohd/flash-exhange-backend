@@ -5,6 +5,8 @@ const JWT_SECRET = process.env.JWT_SECRET
 const  verifyUser = async(req, res, next) => {
   try {
     const token = req.cookies.token;
+    console.log(token);
+    
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const decoded = jwt.verify(token, JWT_SECRET);
