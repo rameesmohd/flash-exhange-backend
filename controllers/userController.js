@@ -15,18 +15,13 @@ const createToken = (userId) => {
 };
 
 const generateUniqueInviteCode = async () => {
-  let codeExists = true;
-  let inviteCode = '';
-
-  while (codeExists) {
-    inviteCode  = Math.floor(1000000 + Math.random() * 9000000).toString(); // 7-digit number
-    const existing = await userModel.findOne({ inviteCode  });
-    if (!existing) {
-      codeExists = false;
-    }
+  const MAX_RETRIES = 10;
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    const inviteCode = Math.floor(1000000 + Math.random() * 9000000).toString(); // 7-digit number
+    const existing = await userModel.findOne({ referralCode: inviteCode });
+    if (!existing) return inviteCode;
   }
-
-  return inviteCode;
+  throw new Error("Failed to generate unique invite code after multiple attempts");
 };
 
 const signup = async (req, res) => {
@@ -58,6 +53,13 @@ const signup = async (req, res) => {
       if (refUser) {
         refUserId = refUser._id;
       }
+    }
+
+    if (!newReferralCode) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to generate referral code. Try again.",
+      });
     }
     
     user = new userModel({
@@ -161,7 +163,7 @@ const signin = async (req, res) => {
 const logout = async (req, res) => {
   try {
     const token = req.cookies.token;
-
+    
     if (!token) {
       return res.status(401).json({ success: false, message: "No token provided" });
     }
