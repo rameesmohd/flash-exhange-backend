@@ -104,7 +104,8 @@ const signup = async (req, res) => {
       .cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "Lax",
+        sameSite: "None",
+        domain: ".evaluetrade.com",
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       })
       .status(200)
@@ -145,7 +146,8 @@ const signin = async (req, res) => {
     .cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      sameSite: "None",
+      domain: ".evaluetrade.com",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     })
     .status(200)
@@ -180,7 +182,8 @@ const logout = async (req, res) => {
     {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "Lax",
+        sameSite: "None",
+        domain: ".evaluetrade.com"
     });
     return res.status(200).json({ success: true, message: "Logged out" });
   } catch (err) {
