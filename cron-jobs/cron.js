@@ -39,7 +39,7 @@ const companyAddressesModel = require("../model/companyAddress");
 
 cron.schedule("* * * * *", () => {
   setImmediate(async () => {
-    console.log("CRON: Checking for expired deposits...");
+    // console.log("CRON: Checking for expired deposits...");
 
     const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
 
