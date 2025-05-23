@@ -104,8 +104,8 @@ const signup = async (req, res) => {
       .cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "None",
-        domain: ".evaluetrade.com",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        ...(process.env.NODE_ENV === "production" && { domain: ".evaluetrade.com" }),
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       })
       .status(200)
@@ -143,19 +143,19 @@ const signin = async (req, res) => {
     await user.save();
 
     res
-    .cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "None",
-      domain: ".evaluetrade.com",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    })
-    .status(200)
-    .json({
-      success: true,
-      message: "Logged in successfully",
-      user
-    });
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        ...(process.env.NODE_ENV === "production" && { domain: ".evaluetrade.com" }),
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      })
+      .status(200)
+      .json({
+        success: true,
+        message: "Logged in successfully",
+        user
+      });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Server error" });
@@ -182,8 +182,8 @@ const logout = async (req, res) => {
     {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "None",
-        domain: ".evaluetrade.com"
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        ...(process.env.NODE_ENV === "production" && { domain: ".evaluetrade.com" }),
     });
     return res.status(200).json({ success: true, message: "Logged out" });
   } catch (err) {

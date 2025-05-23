@@ -194,7 +194,7 @@ const createOrder = async (req, res) => {
 const fetchOrders=async(req,res)=>{
     try {
         const user = req.user
-        const orders = await orderModel.find({userId : user._id})
+        const orders = await orderModel.find({userId : user._id}).populate("fund").sort({createdAt : -1})
         res.status(200).json({success: true,orders})
     } catch (error) {
         console.log(error);
