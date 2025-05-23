@@ -135,7 +135,7 @@ const createOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "Fund not available" });
     }
 
-    const isBankCardExist = await bankCardModel.findOne({ _id: bankCard._id }).session(session);
+    const isBankCardExist = await bankCardModel.findOne({ _id: bankCard._id,userId:user._id }).session(session);
     if (!isBankCardExist) {
       await session.abortTransaction();
       session.endSession();
