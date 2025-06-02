@@ -15,6 +15,11 @@ const addressSchema= new Schema({
             type : Boolean,
             default : false
         },
+        status : {
+            type  : String,
+            enum : ["active","inactive"],
+            default : "active"
+        },
         priority : {
             type : Number,
         }

@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const userModel = require('../model/user')
+const adminModel = require('../model/admin');
 const JWT_SECRET = process.env.JWT_SECRET
 
 const  verifyUser = async(req, res, next) => {
@@ -10,9 +10,9 @@ const  verifyUser = async(req, res, next) => {
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = await userModel.findById({_id :decoded.userId});
+    const admin = await adminModel.findById({_id :decoded.adminId});
     
-    if (!user || user.currentToken !== token) {
+    if (!admin || admin.currentToken !== token) {
       return res.status(401).json({ message: "Session expired or invalid" });
     }
 

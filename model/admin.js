@@ -44,13 +44,13 @@ const adminSchema= new Schema({
         },
         otherExchangeRates: [
             {
-            binance: {
-                type: String,
-            },
-            lastUpdated: {
-                type: Date,
-                default: Date.now,
-            },
+                binance: {
+                    type: String,
+                },
+                lastUpdated: {
+                    type: Date,
+                    default: Date.now,
+                },
             },
         ],
         referralCommissions: {
@@ -66,7 +66,14 @@ const adminSchema= new Schema({
                 type: Number,
                 default: 0.03,
             },
-        }
+        },
+        currentToken: { 
+            type: String 
+        }, 
+        transactionPin : {
+            type : String
+        },
+
     }, 
     {
         timestamps: true,

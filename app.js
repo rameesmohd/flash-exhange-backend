@@ -8,6 +8,8 @@ const bodyParser = require("body-parser");
 const app = express();
 const helmet = require('helmet');
 const userRoute = require('./routes/userRoute')
+const adminRoute = require('./routes/adminRoute')
+
 const cookieParser = require("cookie-parser");
 const { getP2pPrices } = require('./utility/updateP2pPrices');
 
@@ -66,6 +68,7 @@ app.use(bodyParser.json());
 
 require('./cron-jobs/cron')
 
+app.use('/api/admin',adminRoute)
 app.use('/api',userRoute)
 
 app.use((err, req, res, next) => {

@@ -1,76 +1,74 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const userSchema= new Schema({
+const userSchema = new Schema(
+  {
     email: {
-        type : String,
-        unique : true,
-        index : true,
-        required : true
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      lowercase: true,
+      trim: true,
     },
     phone: {
-        type : String,
-        unique : true,
-        index : true,
-        required : true
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
     },
-    transactionPin : {
-        type : String
+    transactionPin: {
+      type: String,
+      default: null,
     },
     totalBalance: {
-        type : Number,
-        default : 0,
-        min: 0
+      type: Number,
+      default: 0,
+      min: 0,
     },
     availableBalance: {
-        type : Number,
-        default : 0,
-        min: 0
+      type: Number,
+      default: 0,
+      min: 0,
     },
     processing: {
-        type  : Number,
-        default : 0,
-        min: 0
+      type: Number,
+      default: 0,
+      min: 0,
     },
-    disputeAmount  :{
-        type : Number,
-        default  :0,
-        min: 0
+    disputeAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     referrer: {
-        type: Schema.Types.ObjectId,
-        ref: "users",
-        default: null,
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      default: null,
     },
-    referralCode : {
-        type : String,
-        required : true,
-        unique : true
+    referralCode: {
+      type: String,
+      required: true,
+      unique: true,
     },
-    totalReferralCommission : {
-        type : Number,
-        default : 0
+    totalReferralCommission: {
+      type: Number,
+      default: 0,
     },
-    totalReferrals : {
-        levelOne : {
-            type : Number,
-            default : 0,
-            min  : 0
-        },
-        levelTwo : {
-            type: Number,
-            default : 0,
-            min  :0
-        }
+    totalReferrals: {
+      levelOne: { type: Number, default: 0 },
+      levelTwo: { type: Number, default: 0 },
     },
-    currentToken: { 
-        type: String 
-    }, // Token Version
-}, 
-    {
-        timestamps: true,
-    }
-)
+    currentToken: {
+      type: String,
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
 
 const userModel = mongoose.model('users', userSchema);
 module.exports = userModel;

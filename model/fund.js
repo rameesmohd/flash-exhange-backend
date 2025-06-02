@@ -1,7 +1,12 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const fundSchema= new Schema({
+/**
+ * Fund Schema defines the structure for fund documents
+ */
+const fundSchema = new Schema(
+  {
+    // Required Fields
     type: {
       type: String,
       required: true,
@@ -12,31 +17,52 @@ const fundSchema= new Schema({
       required: true,
       min: 0,
     },
+    paymentMode : {
+      type : String,
+      enum : ["bank","upi"],
+      required: true
+    },
+
+    // Optional Settings & Configuration
+    maxFulfillmentTime: {
+      type: Number,
+      min: 1,
+      default: null,
+    },
+    password: {
+      type: String,
+      default: null,
+    },
+    transactionPass: {
+      type: String,
+      default: null,
+    },
+    message: {
+      type: String,
+      default: null,
+    },
+
+    // Telegram Integration
+    teleChannel: {
+      type: String,
+      default: null,
+    },
+    teleApi: {
+      type: String,
+      default: null,
+    },
+
+    // Status of the fund
     status: {
       type: String,
-      enum: ["active", "unavailable", "stockout"],
-      default: "active",
+      enum: ["active", "inactive", "stockout"],
+      default: "inactive",
     },
-    maxFulfillmentTime: {
-        type: Number,
-        required: false,
-        min: 1,
-    },
-    availableStock: {
-      type: Number,
-      required: false,
-      min: 0,
-    },
-    fundAdmin: {
-      type: String,
-      required: false,
-      trim: true,
-    }
-    }, 
-    {
-        timestamps: true,
-    }
-)
+  },
+  {
+    timestamps: true, // createdAt & updatedAt fields
+  }
+);
 
-const fundModel = mongoose.model('fund', fundSchema);
-module.exports = fundModel;
+// Export the model
+module.exports = mongoose.model("fund", fundSchema);

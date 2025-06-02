@@ -1,11 +1,11 @@
-const fundModel = require('../model/fund')
-const orderModel = require('../model/order')
-const bankCardModel = require('../model/bankCard')
-const userModel = require('../model/user')
-const generateSixDigitId = require('../utility/generateSixDigitId')
+const fundModel = require('../../model/fund')
+const orderModel = require('../../model/order')
+const bankCardModel = require('../../model/bankCard')
+const userModel = require('../../model/user')
+const generateSixDigitId = require('../../utility/generateSixDigitId')
 const mongoose = require('mongoose');
-const { getP2pPrices } = require('../utility/updateP2pPrices')
-const adminModel = require('../model/admin')
+const { getP2pPrices } = require('../../utility/updateP2pPrices')
+const adminModel = require('../../model/admin')
 const { validateTransPass } = require('./userController')
 
 const fetchFunds=async(req,res)=>{
@@ -110,84 +110,66 @@ const createOrder = async (req, res) => {
   try {
     const validation = await validateTransPass(req);
     if (!validation.success) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(validation.status).json({ success: false, message: validation.message });
+      throw new Error(validation.message);
     }
 
     const { usdt, fiat, fund, bankCard } = req.body;
     const user = req.user;
 
     if (user.availableBalance < usdt) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ success: false, message: "Insufficient balance" });
+      throw new Error("Insufficient balance");
     }
 
-    const isFundValid = await fundModel.findOne({ _id: fund._id, status: "active" }).session(session);
+    const fundDoc = await fundModel.findOne({ _id: fund._id, status: "active" }).session(session);
     if (
-      !isFundValid ||
-      fund.rate !== isFundValid.rate ||
-      Math.abs(fiat / isFundValid.rate - usdt) > 0.01
+      !fundDoc ||
+      fund.rate !== fundDoc.rate ||
+      Math.abs(fiat / fundDoc.rate - usdt) > 0.01
     ) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ success: false, message: "Fund not available" });
+      throw new Error("Fund not available or rate mismatch");
     }
 
-    const isBankCardExist = await bankCardModel.findOne({ _id: bankCard._id,userId:user._id }).session(session);
-    if (!isBankCardExist) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ success: false, message: "Invalid bank card" });
+    const bankDoc = await bankCardModel.findOne({ _id: bankCard._id, userId: user._id }).session(session);
+    if (!bankDoc) {
+      throw new Error("Invalid bank card");
     }
 
     const orderId = await generateUniqueWithdrawTransactionId();
     const newOrder = new orderModel({
       userId: user._id,
-      fund: isFundValid._id,
+      fund: fundDoc._id,
       usdt,
       fiat,
       orderId,
       bankCard: {
-        accountNumber: isBankCardExist.accountNumber,
-        accountName: isBankCardExist.accountName,
-        ifsc: isBankCardExist.ifsc,
+        accountNumber: bankDoc.accountNumber,
+        accountName: bankDoc.accountName,
+        ifsc: bankDoc.ifsc,
       },
     });
 
-    const processing = user.processing + Number(usdt);
-    const availableBalance = user.availableBalance - Number(usdt);
-    const totalBalance = availableBalance + processing;
-
-    const updatedUser = await userModel.findOneAndUpdate(
-      { _id: user._id },
-      {
-        $set: {
-          totalBalance,
-          processing,
-          availableBalance,
-        },
-      },
-      { new: true, session }
-    );
+    user.processing += Number((usdt).toFixed(2));
+    user.availableBalance -= Number((usdt).toFixed(2));
+    user.totalBalance = user.availableBalance + user.processing;
 
     await newOrder.save({ session });
+    await userModel.updateOne({ _id: user._id }, {
+      $set: {
+        processing: user.processing,
+        availableBalance: user.availableBalance,
+        totalBalance: user.totalBalance,
+      },
+    }, { session });
 
     await session.commitTransaction();
-    session.endSession();
+    return res.status(200).json({ success: true, message: "Order created successfully" });
 
-    return res.status(200).json({
-      success: true,
-      message: "Order created successfully",
-      user: updatedUser,
-    });
-
-  } catch (error) {
+  } catch (err) {
     await session.abortTransaction();
+    console.error("createOrder error:", err);
+    return res.status(400).json({ success: false, message: err.message || "Failed to create order" });
+  } finally {
     session.endSession();
-    console.error("createOrder error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 

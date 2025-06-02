@@ -1,12 +1,12 @@
-const addressModel = require("../model/address");
-const depositModel = require("../model/deposit")
-const userModel = require('../model/user');
-const withdrawModel = require("../model/withdraw");
-const generateSixDigitId = require('../utility/generateSixDigitId')
+const addressModel = require("../../model/address");
+const depositModel = require("../../model/deposit")
+const userModel = require('../../model/user');
+const withdrawModel = require("../../model/withdraw");
+const generateSixDigitId = require('../../utility/generateSixDigitId')
 const  TronWeb  = require('tronweb');
 const mongoose = require("mongoose");
 const { validateTransPass } = require("./userController");
-const companyAddressesModel = require("../model/companyAddress");
+const companyAddressesModel = require("../../model/companyAddress");
 const USDT_CONTRACT_ADDRESS = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 
 // Function to create a new TronWeb instance
@@ -23,21 +23,20 @@ const initializeUsdtContract = async (tronWebInstance) => {
 };
 
 const generateUniqueDepositTransactionId = async () => {
-let unique = false;
-let transactionId = '';
+    let unique = false;
+    let transactionId = '';
 
-while (!unique) {
-    transactionId = generateSixDigitId();
-    const existing = await depositModel.findOne({ transactionId });
+    while (!unique) {
+        transactionId = generateSixDigitId();
+        const existing = await depositModel.findOne({ transactionId });
 
-    if (!existing) {
-        unique = true;
+        if (!existing) {
+            unique = true;
+        }
     }
-}
 
-return transactionId;
+    return transactionId;
 };
-
 
 const createDeposit = async (req, res) => {
   try {
@@ -64,11 +63,8 @@ const createDeposit = async (req, res) => {
       }
     );
 
-    console.log(availableAddress);
-    
-
     if (!availableAddress) {
-      return res.status(400).json({ success: false, message: "No available address for deposit" });
+      return res.status(400).json({ success: false, message: "No available address for deposit,please wait few minutes" });
     }
 
     const newDeposit = new depositModel({
@@ -84,9 +80,9 @@ const createDeposit = async (req, res) => {
     const populatedDeposit = await depositModel.findById(newDeposit._id).populate("recieveAddress");
 
     return res.status(201).json({
-    success: true,
-    message: "Deposit created successfully",
-    deposit: populatedDeposit
+      success: true,
+      message: "Deposit created successfully",
+      deposit: populatedDeposit
     });
 
   } catch (error) {

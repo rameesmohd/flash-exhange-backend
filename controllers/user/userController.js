@@ -1,13 +1,12 @@
-const userModel = require('../model/user')
-const depositModel = require('../model/deposit')
+const userModel = require('../../model/user')
 const jwt = require('jsonwebtoken');
-const bankCardModel = require('../model/bankCard');
+const bankCardModel = require('../../model/bankCard');
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES_IN = "1d";
 const bcrypt = require("bcrypt");
-const otpModel = require('../model/otp');
+const otpModel = require('../../model/otp');
 const { Resend } = require("resend");
-const referralModel = require('../model/referrals');
+const referralModel = require('../../model/referrals');
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 
 const createToken = (userId) => {

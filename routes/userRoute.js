@@ -12,7 +12,7 @@ const {
     signin,
     sendOtpSignup,
     getReferrals,
-} = require('../controllers/userController')
+} = require('../controllers/user/userController')
 const { 
     verifyPayment, 
     fetchDepositHistory, 
@@ -21,12 +21,12 @@ const {
     saveAddress,
     submitWithdraw,
     fetchWithdrawHistory
-} = require('../controllers/paymentController');
+} = require('../controllers/user/paymentController');
 const { 
     fetchFunds, 
     createOrder, 
     fetchOrders
-} = require('../controllers/orderController');
+} = require('../controllers/user/orderController');
 
 router.post('/signup',signup)
 router.post('/signin',signin)
