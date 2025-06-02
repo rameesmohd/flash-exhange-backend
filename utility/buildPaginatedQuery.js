@@ -30,7 +30,7 @@ const buildPaginatedQuery = (reqQuery, allowedFilters = [],extraSearchConditions
      // Search filter
     if (search) {
       const searchRegex = { $regex: search, $options: 'i' };
-      // console.log(searchRegex , 'searchRegex');
+      console.log(searchRegex , 'searchRegex');
       
       const orConditions = [];
 

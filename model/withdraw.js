@@ -1,46 +1,56 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const withdrawSchema= new Schema({
-    userId : {
-        type: Schema.Types.ObjectId, 
-        ref : "users",
-        index: true
+const withdrawSchema = new Schema(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "users",
+      required: true,
+      index: true,
     },
-    paymentMode : {
-        type : String,
-        enum : ["BEP-20","TRC-20"],
-        default : "TRC-20"
+    paymentMode: {
+      type: String,
+      enum: ["BEP-20", "TRC-20"],
+      default: "TRC-20",
+      required: true,
     },
-    recieveAddress : {
-        type : String,
-        require : true
+    receiveAddress: {
+      type: String,
+      required: true,
+      trim: true,
     },
-    status : {
-        type : String,
-        enum : ["pending","proccessing","success","failed","dispute"],
-        default : "pending"
+    status: {
+      type: String,
+      enum: ["pending", "processing", "success", "failed", "dispute"],
+      default: "pending",
+      required: true,
+      index: true 
     },
-    txid : {
-        type : String,
-        unique : true,
-        sparse: true
+    txid: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+      default: null,
     },
-    amount: { 
-        type: Number, 
-        min  : 0,
-        required: true 
+    amount: {
+      type: Number,
+      required: true,
+      min: 0,
+      set: val => parseFloat(val.toFixed(2)),
     },
-    transactionId : {
-        type : String,
-        index : true,
-        required : true
-    }
-    }, 
-    {
-        timestamps: true,
-    }
-)
+    transactionId: {
+      type: String,
+      required: true,
+      trim: true,
+      index: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-const withdrawModel = mongoose.model('withdraw', withdrawSchema);
+const withdrawModel = mongoose.model("withdraw", withdrawSchema);
 module.exports = withdrawModel;

@@ -23,21 +23,6 @@ const fetchUsers = async(req,res)=>{
     }
 }
 
-
-
-
-
-
-const fetchWithdrawals = async(req,res)=>{
-    try {
-        const withdrawals = await withdrawModel.find({})
-        return res.status(200).json({result : withdrawals , success: true})
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({success : false,message : "Server error"})
-    }
-}
-
 const fetchCompanyAddress = async (req,res)=>{
     try {
         const companyAddress = await companyAddressesModel.find({})
@@ -79,7 +64,6 @@ module.exports = {
     login,
     fetchUsers,
 
-    fetchWithdrawals,
     fetchCompanyAddress,
 
     changeUserEmail

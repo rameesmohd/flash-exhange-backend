@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const orderModel = require("../../model/order");
 const userModel = require("../../model/user");
 const { buildPaginatedQuery } = require("../../utility/buildPaginatedQuery");
@@ -87,13 +88,13 @@ const handleOrderStatus = async (req, res) => {
       });
     }
 
-    if (order.status === 'success') {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: 'Order already marked as success.',
-      });
-    }
+    // if (order.status === 'success') {
+    //   await session.abortTransaction();
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Order already marked as success.',
+    //   });
+    // }
 
     order.status = status;
     await order.save({ session });

@@ -20,11 +20,12 @@ const depositSchema = new Schema(
       enum: ["pending", "processing", "success", "failed", "dispute"],
       default: "pending",
       required: true,
+      index: true 
     },
     txid: {
       type: String,
       unique: true,
-      sparse: true, // Allows multiple null values
+      sparse: true, 
       trim: true,
       default: null,
     },
@@ -32,7 +33,7 @@ const depositSchema = new Schema(
       type: Number,
       required: true,
       min: 0,
-      set: val => parseFloat(val.toFixed(2)), // ensure two decimal precision
+      set: val => parseFloat(val.toFixed(2)), 
     },
     transactionId: {
       type: String,

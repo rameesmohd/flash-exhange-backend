@@ -7,6 +7,7 @@ const adminController = require('../controllers/admin/admin');
 const fundController = require('../controllers/admin/fund');
 const orderController = require('../controllers/admin/order');
 const depositController = require('../controllers/admin/deposit');
+const withdrawelController = require('../controllers/admin/withdrawel');
 
 // Optionally secure all routes
 // router.use(verifyUser);
@@ -21,7 +22,6 @@ router.route('/fund')
   .get(fundController.fetchFunds)
   .post(fundController.addFunds)
   .patch(fundController.updateFund);
-
 router.patch('/fund/:id/update-status', fundController.updateFundStatus);
 
 // Order Routes
@@ -32,6 +32,8 @@ router.route('/orders')
 // Deposit & Withdrawal Routes
 router.get('/deposits', depositController.fetchDeposits);
 
-router.get('/withdrawals', adminController.fetchWithdrawals);
+router.route('/withdrawals')
+    .get(withdrawelController.fetchWithdrawals)
+    .patch(withdrawelController.handleWithdrawStatus)
 
 module.exports = router;
