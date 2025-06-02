@@ -125,6 +125,34 @@ const handleOrderStatus = async (req, res) => {
       );
     }
 
+    if (status === 'failed') {
+      const user = await userModel.findById(order.userId).session(session);
+      if (!user) {
+        await session.abortTransaction();
+        return res.status(404).json({
+          success: false,
+          message: 'User not found.',
+        });
+      }
+
+      // Calculate new balances (rounded to 2 decimals)
+      const processing = Number((user.processing - order.usdt).toFixed(2));
+      const availableBalance = Number((user.availableBalance + order.usdt).toFixed(2));
+      const totalBalance = Number((processing + availableBalance).toFixed(2));
+
+      await userModel.updateOne(
+        { _id: user._id },
+        {
+          $set: {
+            processing,
+            availableBalance,
+            totalBalance,
+          },
+        },
+        { session }
+      );
+    }
+
     await session.commitTransaction();
     session.endSession();
 
