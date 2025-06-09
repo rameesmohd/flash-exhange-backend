@@ -9,13 +9,20 @@ const orderController = require('../controllers/admin/order');
 const depositController = require('../controllers/admin/deposit');
 const withdrawelController = require('../controllers/admin/withdrawel');
 
-// Optionally secure all routes
-// router.use(verifyUser);
+
+router.post('/login',adminController.login);
+
+router.use(verifyUser);
 
 // User Routes
 router.get('/users', adminController.fetchUsers);
 router.post('/change-email', adminController.changeUserEmail);
-router.get('/address', adminController.fetchCompanyAddress);
+
+// Fund Address
+router.route('/address')
+  .get(adminController.fetchCompanyAddress)
+  .post(adminController.addCompanyAddress)
+  .patch(adminController.updateAddress);
 
 // Fund Routes
 router.route('/fund')
@@ -34,6 +41,6 @@ router.get('/deposits', depositController.fetchDeposits);
 
 router.route('/withdrawals')
     .get(withdrawelController.fetchWithdrawals)
-    .patch(withdrawelController.handleWithdrawStatus)
+    .patch(withdrawelController.handleWithdrawStatus);
 
 module.exports = router;
