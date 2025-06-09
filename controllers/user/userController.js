@@ -100,7 +100,7 @@ const signup = async (req, res) => {
     }}
 
     res
-      .cookie("token", token, {
+      .cookie("userToken", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
@@ -142,7 +142,7 @@ const signin = async (req, res) => {
     await user.save();
 
     res
-      .cookie("token", token, {
+      .cookie("userToken", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
@@ -193,16 +193,28 @@ const logout = async (req, res) => {
 
 const addBankCard=async(req,res)=>{
   try {
-    
-    const { accountNumber,ifsc,accountName} = req.body
+    const { accountNumber,ifsc,accountName ,mode , upi} = req.body
     const user =  req.user
-    const newBankCard = new bankCardModel({
-      userId : user._id,
-      accountNumber,
-      ifsc,
-      accountName
-    })
-    await newBankCard.save()
+    console.log(req.body);
+    
+    if(mode === "bank"){
+      const newBankCard = new bankCardModel({
+        userId : user._id,
+        accountNumber,
+        ifsc,
+        accountName,
+        mode
+      })
+      await newBankCard.save()
+    } else if(mode ==="upi"){
+      const newBankCard = new bankCardModel({
+        userId : user._id,
+        upi,
+        mode
+      })
+      await newBankCard.save()
+    }
+
     return res.status(200).json({success: true,message : "Bank card added successfully"})
   } catch (error) {
     console.log(error);

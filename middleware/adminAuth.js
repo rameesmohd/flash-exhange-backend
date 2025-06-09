@@ -4,7 +4,7 @@ const JWT_SECRET = process.env.JWT_SECRET_ADMIN
 
 const  verifyUser = async(req, res, next) => {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.adminToken;
     console.log(token);
     
     if (!token) return res.status(401).json({ message: "Unauthorized" });

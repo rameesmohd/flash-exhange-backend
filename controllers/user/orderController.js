@@ -135,21 +135,29 @@ const createOrder = async (req, res) => {
     }
 
     const orderId = await generateUniqueWithdrawTransactionId();
+
     const newOrder = new orderModel({
       userId: user._id,
       fund: fundDoc._id,
       usdt,
       fiat,
       orderId,
-      bankCard: {
-        accountNumber: bankDoc.accountNumber,
-        accountName: bankDoc.accountName,
-        ifsc: bankDoc.ifsc,
-      },
+      bankCard: bankDoc.mode === "upi"
+        ? {
+            mode: bankDoc.mode,
+            upi: bankDoc.upi, // ✅ Correct: assigning the actual UPI ID
+          }
+        : {
+            mode: bankDoc.mode,
+            accountNumber: bankDoc.accountNumber,
+            accountName: bankDoc.accountName,
+            ifsc: bankDoc.ifsc,
+          },
     });
 
-    user.processing += Number((usdt).toFixed(2));
-    user.availableBalance -= Number((usdt).toFixed(2));
+    const fixedUsdt = Number(parseFloat(usdt).toFixed(2));
+    user.processing += fixedUsdt;
+    user.availableBalance -= fixedUsdt;
     user.totalBalance = user.availableBalance + user.processing;
 
     await newOrder.save({ session });

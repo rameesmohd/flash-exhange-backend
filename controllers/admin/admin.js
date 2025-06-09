@@ -34,7 +34,7 @@ const login = async (req, res) => {
     admin.currentToken = token;
     await admin.save();
 
-    res.cookie("token", token, {
+    res.cookie("adminToken", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",

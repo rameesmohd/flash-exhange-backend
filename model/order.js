@@ -36,9 +36,11 @@ const orderSchema = new Schema(
       default: "pending",
     },
     bankCard: {
-      accountNumber: { type: String, required: true },
-      ifsc: { type: String, required: true },
-      accountName: { type: String, required: true },
+      accountNumber: { type: String, required: false },
+      ifsc: { type: String, required: false },
+      accountName: { type: String, required: false },
+      upi : { type: String,required : false },
+      mode : { type: String,required : true }
     },
   },
   {
