@@ -1,6 +1,7 @@
 const cron = require("node-cron");
 const depositModel = require("../model/deposit");
 const companyAddressesModel = require("../model/companyAddress");
+const { getP2pPrices } = require("../utility/updateP2pPrices");
 
 cron.schedule("* * * * *", () => {
   setImmediate(async () => {
@@ -41,4 +42,13 @@ cron.schedule("* * * * *", () => {
 }, {
   scheduled: true,
   timezone: "UTC"
+});
+
+cron.schedule('0 0,12 * * *', async () => {
+  try {
+    await getP2pPrices();
+    console.log('✅ getP2pPrices called successfully.');
+  } catch (error) {
+    console.error('❌ Error calling getP2pPrices:', error);
+  }
 });

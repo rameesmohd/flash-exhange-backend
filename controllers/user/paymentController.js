@@ -70,7 +70,7 @@ const createDeposit = async (req, res) => {
 
     const newDeposit = new depositModel({
       userId: user._id,
-      amount,
+      amount : Number(amount),
       transactionId: transaction_id,
       recieveAddress: availableAddress._id
     });

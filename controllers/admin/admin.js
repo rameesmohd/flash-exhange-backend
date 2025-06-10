@@ -113,7 +113,7 @@ const updateAddress = async(req,res)=>{
  try {
     const { _id, status, priority,flag } = req.body;
 
-    if (!_id || !status || !priority || !flag || !priority) {
+    if (!_id || !status || !priority || flag === undefined) {
       return res.status(400).json({ success: false, message: 'All fields are required.' });
     }
 

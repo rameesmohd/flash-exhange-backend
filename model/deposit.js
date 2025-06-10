@@ -24,9 +24,9 @@ const depositSchema = new Schema(
     },
     txid: {
       type: String,
-      unique: true,
-      sparse: true, 
       trim: true,
+      index:true,
+      sparse: true, 
       default: null,
     },
     amount: {
@@ -42,7 +42,7 @@ const depositSchema = new Schema(
     },
     recieveAddress: {
       type: Schema.Types.ObjectId,
-      ref: "company-address",
+      ref: "companyaddress",
       required: true,
     },
   },
