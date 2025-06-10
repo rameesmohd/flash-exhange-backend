@@ -7,10 +7,11 @@ const mongoose = require('mongoose');
 const { getP2pPrices } = require('../../utility/updateP2pPrices')
 const adminModel = require('../../model/admin')
 const { validateTransPass } = require('./userController')
+const { default: axios } = require('axios')
 
 const fetchFunds=async(req,res)=>{
     try {   
-        const funds = await fundModel.find({})
+        const funds = await fundModel.find({status : "active"})
         const otherExchangeRates = await adminModel.findOne({},{otherExchangeRates:1})
         
         return res.status(200).json({success: true, funds:funds ,otherExchangeRates: otherExchangeRates.otherExchangeRates})
@@ -36,73 +37,111 @@ const generateUniqueWithdrawTransactionId = async () => {
     return transactionId;
 };
 
-// const createOrder=async(req,res)=>{
-//     try {
-        
-//         const validation = await validateTransPass(req);
-//         if (!validation.success) {
-//             return res.status(validation.status).json({ success: false, message: validation.message });
-//         }
+const sentBankOrderMessage = async (order,fund) => {
+      console.log(order,fund);
 
-//         const { usdt,fiat,fund,bankCard }=req.body
-//         const user = req.user
-        
-//         if(user.availableBalance<usdt){
-//             return res.status(400).json({ success: false, message: "Insufficient balance" });
-//         }
+      if(!fund.teleApi || !fund.teleChannel) return 
 
-//         const isFundValid = await fundModel.findOne({_id : fund._id,status : "active"})
-//         if ( 
-//             !isFundValid || 
-//             fund.rate !== isFundValid.rate ||
-//             Math.abs(fiat / isFundValid.rate - usdt) > 0.01
-//         ) {
-//             return res.status(400).json({ success: false, message: "Fund not available" });
-//         }
+      // const caption =`*✅ USDT Sale Order Placed:*\n\n💰USDT: $${order.usdt}\n👨‍💻OrderId: ${order.orderId}\nBank Account: ${order.bankCard.accountNumber}\nIFSC: ${order.bankCard.ifsc}\nName: ${order.bankCard.accountName}`;
 
-//         const isBankCardExist=await bankCardModel.findOne({_id: bankCard._id})
-//         if(!isBankCardExist){
-//             return res.status(400).json({ success: false, message: "Invalid bank card" });
-//         }
+      const caption = 
+      "```\n" +
+      "✅ USDT Sale Order Placed\n" +
+      "----------------------------\n" +
+      "💵 Amount     : $"+ order.usdt + "\n" +
+      "🆔 Order ID   : " + order.orderId + "\n" +
+      "🏦 Bank Info\n" +
+      "   Name       : " + order.bankCard.accountName + "\n" +
+      "   Account No : " + order.bankCard.accountNumber + "\n" +
+      "   IFSC       : " + order.bankCard.ifsc + "\n" +
+      "```";
 
-//         const orderId = await generateUniqueWithdrawTransactionId()
-//         const newOrder = new orderModel({
-//             userId : user._id,
-//             fund : isFundValid._id,
-//             usdt,
-//             fiat,
-//             orderId,
-//             bankCard : {
-//                 accountNumber : isBankCardExist.accountNumber,
-//                 accountName : isBankCardExist.accountName,
-//                 ifsc : isBankCardExist.ifsc
-//             }
-//         })
-//         console.log(user);
-        
-//         const processing = user.processing + Number(usdt);
-//         const availableBalance = user.availableBalance-Number(usdt);
-//         const totalBalance = availableBalance+processing
-//         const updatedUser = await userModel.findOneAndUpdate(
-//             { _id: user._id },
-//             {
-//               $set: {
-//                 totalBalance,
-//                 processing,
-//                 availableBalance
-//               }
-//             },
-//             {
-//               new: true // returns the updated document
-//             }
-//         );
-//         await newOrder.save()
-//         return res.status(200).json({success: true,message:"Order created successfully",user : updatedUser})
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).json({success : false,message : "Server error"})
-//     }
-// }
+      const url = `https://api.telegram.org/bot${fund.teleApi}/sendMessage`;
+      
+      const params = {
+        chat_id: fund.teleChannel,
+        text: caption,
+        parse_mode: 'MarkdownV2',
+        reply_markup: JSON.stringify({
+          inline_keyboard: [
+            [
+              // {
+              //   text: 'Approve',
+              //   url: 'https://discord.gg/',
+              // },
+              //  {
+              //   text: 'Reject',
+              //   url: 'https://discord.gg/',
+              // }
+            ], 
+          ],
+        }),
+      };
+    
+      try {
+        await axios.post(url, params);
+      } catch (error) {
+        console.error(error);
+      }
+      return 
+}
+
+const QRCode = require('qrcode');
+const FormData = require('form-data'); // Correct FormData for Node.js
+
+const sentUpiOrderMessage = async (order, fund) => {
+  console.log(order, fund);
+
+  if (!fund.teleApi || !fund.teleChannel) return;
+
+  const caption =
+    "```\n" +
+    "✅ USDT Sale Order Placed\n" +
+    "----------------------------\n" +
+    "💵 Amount     : $" + order.usdt + "\n" +
+    "🆔 Order ID   : " + order.orderId + "\n" +
+    "🏦 UPI Info\n" +
+    "   UPI       : " + order.bankCard.upi + "\n" +
+    "```";
+
+  try {
+    // 1. Generate UPI QR code
+    const upiUrl = `upi://pay?pa=${order.bankCard.upi}&pn=${encodeURIComponent(order.bankCard.accountName)}`;
+    const qrDataUrl = await QRCode.toDataURL(upiUrl);
+
+    // 2. Convert base64 image to buffer
+    const base64Data = qrDataUrl.replace(/^data:image\/png;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    // 3. Prepare form-data
+    const formData = new FormData();
+    formData.append('chat_id', fund.teleChannel);
+    formData.append('caption', caption);
+    formData.append('parse_mode', 'Markdown');
+    formData.append('photo', imageBuffer, {
+      filename: 'upi_qr.png',
+      contentType: 'image/png'
+    });
+    formData.append('reply_markup', JSON.stringify({
+      inline_keyboard: [
+        [
+          // { text: 'Approve', url: 'https://discord.gg/' },
+          // { text: 'Reject', url: 'https://discord.gg/' }
+        ]
+      ]
+    }));
+
+    // 4. Send photo to Telegram
+    const url = `https://api.telegram.org/bot${fund.teleApi}/sendPhoto`;
+    await axios.post(url, formData, {
+      headers: formData.getHeaders()
+    });
+
+  } catch (error) {
+    console.error("Failed to send UPI order message:", error);
+  }
+};
+
 
 const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
@@ -156,6 +195,7 @@ const createOrder = async (req, res) => {
     });
 
     const fixedUsdt = Number(parseFloat(usdt).toFixed(2));
+
     user.processing += fixedUsdt;
     user.availableBalance -= fixedUsdt;
     user.totalBalance = user.availableBalance + user.processing;
@@ -170,6 +210,12 @@ const createOrder = async (req, res) => {
     }, { session });
 
     await session.commitTransaction();
+    if(newOrder.bankCard.mode==="bank"){
+      await sentBankOrderMessage(newOrder,fundDoc)
+    } else if(newOrder.bankCard.mode==="upi"){
+      await sentUpiOrderMessage(newOrder,fundDoc)
+    }
+
     return res.status(200).json({ success: true, message: "Order created successfully" });
 
   } catch (err) {

@@ -36,11 +36,27 @@ const orderSchema = new Schema(
       default: "pending",
     },
     bankCard: {
-      accountNumber: { type: String, required: false },
-      ifsc: { type: String, required: false },
-      accountName: { type: String, required: false },
-      upi : { type: String,required : false },
-      mode : { type: String,required : true }
+      accountNumber: { 
+        type: String, 
+        required: false 
+      },
+      ifsc: { 
+        type: String, 
+        required: false 
+      },
+      accountName: { 
+        type: String, 
+        required: false 
+      },
+      upi : { 
+        type: String,
+        required : false 
+      },
+      mode : { 
+        type: String,
+        required : true,
+        enum: ["bank","upi"] 
+      }
     },
   },
   {
