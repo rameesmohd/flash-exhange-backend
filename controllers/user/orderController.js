@@ -215,9 +215,14 @@ const createOrder = async (req, res) => {
     } else if(newOrder.bankCard.mode==="upi"){
       await sentUpiOrderMessage(newOrder,fundDoc)
     }
+    
+    const updatedUser = await userModel.findById(user._id).select('-transactionPin');
 
-    return res.status(200).json({ success: true, message: "Order created successfully" });
-
+    return res.status(200).json({
+      success: true,
+      message: "Order created successfully",
+      user: updatedUser,
+    });
   } catch (err) {
     await session.abortTransaction();
     console.error("createOrder error:", err);
