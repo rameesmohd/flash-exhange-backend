@@ -2,6 +2,8 @@ const { default: mongoose } = require("mongoose");
 const orderModel = require("../../model/order");
 const userModel = require("../../model/user");
 const { buildPaginatedQuery } = require("../../utility/buildPaginatedQuery");
+const cloudinary = require("../../config/cloudinary");
+const fs = require("fs");
 
 const fetchOrders=async(req,res)=>{
     try {
@@ -55,6 +57,89 @@ const fetchOrders=async(req,res)=>{
         res.status(500).json({success: false,message : "Server error"})
     }
 }
+
+const uploadToCloudinary = (filePath) => {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(
+        filePath,
+        { folder: "screenshots", resource_type: "auto" },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            // 🔹 Delete local file after successful upload
+            fs.unlink(filePath, (err) => {
+              if (err) console.error("Failed to delete file:", err);
+            });
+            resolve(result.secure_url);
+          }
+        }
+      );
+    });
+};
+
+const deleteImage = async (req, res) => {
+  try {
+    const { public_id } = req.body;
+    await cloudinary.uploader.destroy(public_id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
+}
+
+const uploadPaymentScreenshot = async (req, res) => {
+  try {
+    const { orderId } = req.params; 
+    const { urls } = req.body; 
+
+    console.log(orderId,urls);
+    
+    // 🔹 Push the URLs into the `receipts` array using $push + $each
+    const updatedOrder = await orderModel.findOneAndUpdate(
+      { _id: orderId },
+      {
+        $push: {
+          receipts: { $each: urls },
+        },
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({ success: true, result: updatedOrder });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+const deleteReceiptUploaded = async (req, res) => {
+  try {
+    const { url } = req.query;
+    const { orderId } = req.params; 
+
+    if (!orderId || !url) {
+      return res.status(400).json({ success: false, message: 'Missing orderId or url' });
+    }
+
+    const updatedOrder = await orderModel.findByIdAndUpdate(
+      orderId,
+      { $pull: { receipts: url } },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      return res.status(400).json({ success: false, message: 'Order not found' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Receipt removed', order: updatedOrder });
+  } catch (error) {
+    console.error('delete error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 
 const handleOrderStatus = async (req, res) => {
   const session = await mongoose.startSession();
@@ -176,5 +261,8 @@ const handleOrderStatus = async (req, res) => {
 
 module.exports = {
     fetchOrders,
-    handleOrderStatus
+    handleOrderStatus,
+    uploadPaymentScreenshot,
+    deleteImage,
+    deleteReceiptUploaded
 }

@@ -35,6 +35,10 @@ const orderSchema = new Schema(
       enum: ["pending", "processing", "success", "failed", "dispute"],
       default: "pending",
     },
+    receipts: {
+      type: [String],
+      default: [],
+    },
     bankCard: {
       accountNumber: { 
         type: String, 

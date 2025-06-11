@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyUser } = require('../middleware/adminAuth');
+const upload = require('../config/multer');
 
 // Admin Controllers
 const adminController = require('../controllers/admin/admin');
@@ -42,5 +43,11 @@ router.get('/deposits', depositController.fetchDeposits);
 router.route('/withdrawals')
     .get(withdrawelController.fetchWithdrawals)
     .patch(withdrawelController.handleWithdrawStatus);
+
+router.route('/orders/:orderId/screenshots')
+    .post(orderController.uploadPaymentScreenshot)
+    .delete(orderController.deleteReceiptUploaded)
+    
+router.post('/delete-image',orderController.deleteImage)
 
 module.exports = router;
