@@ -193,29 +193,59 @@ const logout = async (req, res) => {
 
 const addBankCard=async(req,res)=>{
   try {
-    const { accountNumber,ifsc,accountName ,mode , upi} = req.body
-    const user =  req.user
-    console.log(req.body);
-    
-    if(mode === "bank"){
+    const { accountNumber, ifsc, accountName, mode, upi } = req.body;
+    const user = req.user;
+
+    // Helper regex patterns
+    const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/; // Example: HDFC0001234
+    const accountNumberRegex = /^\d{9,18}$/;
+    const upiRegex = /^[\w.-]+@[\w.-]+$/;
+
+    if (!mode || !["bank", "upi"].includes(mode)) {
+      return res.status(400).json({ success: false, message: "Invalid or missing mode" });
+    }
+
+    if (mode === "bank") {
+      
+      if (!accountNumber || !accountName || !ifsc) {
+        return res.status(400).json({ success: false, message: "All bank details are required" });
+      }
+
+      if (!accountNumberRegex.test(accountNumber)) {
+        return res.status(400).json({ success: false, message: "Invalid account number" });
+      }
+
+      if (!ifscRegex.test(ifsc)) {
+        return res.status(400).json({ success: false, message: "Invalid IFSC code" });
+      }
+
       const newBankCard = new bankCardModel({
-        userId : user._id,
+        userId: user._id,
         accountNumber,
         ifsc,
         accountName,
         mode
-      })
-      await newBankCard.save()
-    } else if(mode ==="upi"){
+      });
+      await newBankCard.save();
+
+    } else if (mode === "upi") {
+      if (!upi) {
+        return res.status(400).json({ success: false, message: "UPI ID is required" });
+      }
+
+      if (!upiRegex.test(upi)) {
+        return res.status(400).json({ success: false, message: "Invalid UPI ID" });
+      }
+
       const newBankCard = new bankCardModel({
-        userId : user._id,
+        userId: user._id,
         upi,
         mode
-      })
-      await newBankCard.save()
+      });
+      await newBankCard.save();
     }
 
-    return res.status(200).json({success: true,message : "Bank card added successfully"})
+    return res.status(200).json({ success: true, message: "Bank card added successfully" });
   } catch (error) {
     console.log(error);
     return res.status(400).json({success: false, message: "Server error" });
@@ -225,8 +255,13 @@ const addBankCard=async(req,res)=>{
 const fetchBankCards=async(req,res)=>{
   try {
     const user = req.user
-    const bankCards = await bankCardModel.find({userId :user._id })
-    res.status(200).json({success: true,bankCards})
+    const { mode } = req.query
+    const bankCards = await bankCardModel.find({ 
+        userId :user._id,
+        ...(mode=="null" ? {} :{mode})
+      },
+    )
+    return res.status(200).json({success: true,bankCards})
   } catch (error) {
     console.log(error);
     return res.status(400).json({success: false, message: "Server error" });

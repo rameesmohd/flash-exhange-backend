@@ -47,6 +47,18 @@ const createDeposit = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid request" });
     }
 
+    const depositOpened = await depositModel.findOne({ userId: user._id, status: "pending" }).populate("recieveAddress");;
+    if (depositOpened) {
+      depositOpened.amount =  Number(amount),
+      await depositOpened.save();
+      
+      return res.status(200).json({ 
+        success: true,
+        message: "Deposit updated" ,
+        deposit: depositOpened
+      });
+    }
+
     const transaction_id = await generateUniqueDepositTransactionId();
 
     // Atomically pick and lock an available address
@@ -222,13 +234,20 @@ const saveAddress=async(req,res)=>{
     try {
         const {address}=req.body
         const user = req.user
-        if(!address ){
-           return res.status(400).json({success : false,message : "Invalid request"})
+
+        if (!address) {
+          return res.status(400).json({ success: false, message: "Address is required" });
+        }
+
+        // TRC-20 address format validation
+        const isValidTRC20 = /^T[a-zA-Z0-9]{33}$/.test(address);
+        if (!isValidTRC20) {
+          return res.status(400).json({ success: false, message: "Invalid TRC-20 address format" });
         }
 
         const alreadyExist = await addressModel.findOne({userId : user._id,address})
         if(alreadyExist){
-           return  res.status(400).json({success : false,message : "Already exist"})
+           return  res.status(400).json({success : false,message: "Address already exists"})
         }
 
         const newaddress = new addressModel({

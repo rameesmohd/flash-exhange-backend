@@ -12,7 +12,7 @@ cron.schedule("* * * * *", () => {
 
       const expiredDeposits = await depositModel.find({
         status: "pending",
-        createdAt: { $lte: twentyMinutesAgo }
+        updatedAt : { $lte: twentyMinutesAgo }
       }).select("_id recieveAddress").lean();
 
       if (expiredDeposits.length === 0) {
