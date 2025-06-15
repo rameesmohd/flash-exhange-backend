@@ -34,9 +34,9 @@ const signup = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid Transaction Pin." });
     }
 
-    if (!otpRecord || otpRecord.expiresAt < Date.now()) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
-    }
+    // if (!otpRecord || otpRecord.expiresAt < Date.now()) {
+    //   return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+    // }
 
     let user = await userModel.findOne({ email });
     if (user) {
@@ -132,11 +132,11 @@ const signin = async (req, res) => {
     const { email, otpId, otp } = req.body;
     
     // Verify OTP
-    const otpRecord = await otpModel.findOne({ _id: otpId, otp });
+    // const otpRecord = await otpModel.findOne({ _id: otpId, otp });
 
-    if (!otpRecord || otpRecord.expiresAt < Date.now()) {
-      return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
-    }
+    // if (!otpRecord || otpRecord.expiresAt < Date.now()) {
+    //   return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
+    // }
 
     const user = await userModel.findOne({ email });
 
