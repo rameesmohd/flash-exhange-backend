@@ -1,8 +1,9 @@
+require('dotenv').config();
 const userModel = require('../../model/user')
 const jwt = require('jsonwebtoken');
 const bankCardModel = require('../../model/bankCard');
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES_IN = "1d";
+const JWT_EXPIRES_IN = '24h';
 const bcrypt = require("bcrypt");
 const otpModel = require('../../model/otp');
 const { Resend } = require("resend");
@@ -25,9 +26,13 @@ const generateUniqueInviteCode = async () => {
 
 const signup = async (req, res) => {
   try {
-    const { email, phone, referralCode, otpId, otp } = req.body;
+    const { email, phone, referralCode, otpId, otp,transactionPin } = req.body;
 
     const otpRecord = await otpModel.findOne({ _id: otpId, otp });
+
+    if(!transactionPin || transactionPin.length!=6){
+      return res.status(400).json({ success: false, message: "Invalid Transaction Pin." });
+    }
 
     if (!otpRecord || otpRecord.expiresAt < Date.now()) {
       return res.status(400).json({ success: false, message: "Invalid or expired OTP." });
@@ -61,11 +66,14 @@ const signup = async (req, res) => {
       });
     }
     
+    const hashedPin = await bcrypt.hash(transactionPin, 10);
+
     user = new userModel({
       email,
       phone,
       referralCode: newReferralCode,
       referrer:refUserId,
+      transactionPin : hashedPin
     });
     
     const token = createToken(user._id);
@@ -163,7 +171,7 @@ const signin = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    const token = req.cookies.token;
+    const token = req.cookies.userToken;
     
     if (!token) {
       return res.status(401).json({ success: false, message: "No token provided" });
@@ -187,7 +195,7 @@ const logout = async (req, res) => {
     return res.status(200).json({ success: true, message: "Logged out" });
   } catch (err) {
     console.log(err);
-    return res.status(400).json({ success: false, message: "Invalid request" });
+    return res.status(500).json({ success: false, message: "Invalid request" });
   }
 };
 
@@ -248,7 +256,7 @@ const addBankCard=async(req,res)=>{
     return res.status(200).json({ success: true, message: "Bank card added successfully" });
   } catch (error) {
     console.log(error);
-    return res.status(400).json({success: false, message: "Server error" });
+    return res.status(500).json({success: false, message: "Server error" });
   }
 }
 
@@ -404,13 +412,88 @@ const validateTransPass = async (req) => {
   }
 };
 
-const sendOtpSignup = async (req, res) => {
+const sendOtpSignIn = async (req, res) => {
   try {
     const { email } = req.body;
-
     // Basic validation
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ success: false, message: 'A valid email is required.' });
+    }
+
+    const isExist = await userModel.findOne({email})
+    if (!isExist) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found. Please sign up to continue.',
+      });
+    }
+
+    const OTP = Math.floor(100000 + Math.random() * 900000);
+
+    const newOtp = new otpModel({
+      user : email,
+      otp : OTP,
+    })
+
+    await newOtp.save()
+
+    if (process.env.NODE_ENV === "production") {
+      try {
+        await resend.emails.send({
+          from: process.env.NOREPLY_WEBSITE_MAIL,
+          to: email,
+          subject: 'Email Verification - E Value Trade',
+          html: `
+            <div style="font-family: sans-serif; padding: 10px;">
+              <h2 style="color: #333;">Your Verification Code</h2>
+              <p>Use the OTP below to verify your email:</p>
+              <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
+              <p>This code will expire in 10 minutes.</p>
+              <br/>
+              <p>Thanks,<br/>E Value Trade Team</p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send verification email. Please try again.',
+        });
+      }
+    } else {
+      console.log(`Development Mode: OTP for ${email} is ${OTP}`);
+    }
+
+    return res.status(200).json({
+      otpId : newOtp._id,
+      success: true,
+      message: 'OTP sent successfully to your email.',
+    });
+
+  } catch (error) {
+    console.error('OTP send error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error while sending OTP. Please try again later.',
+    });
+  }
+};
+
+const sendOtpSignup = async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Basic validation
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ success: false, message: 'A valid email is required.' });
+    }
+    
+    const isExist = await userModel.findOne({email})
+    if (isExist) {
+      return res.status(404).json({
+        success: false,
+        message: 'User already exist. Please sign in to continue.',
+      });
     }
 
     const OTP = Math.floor(100000 + Math.random() * 900000);
@@ -493,6 +576,7 @@ module.exports={
     fetchBankCards,
     deleteBankCard,
 
+    sendOtpSignIn,
     sendOTPResetTrans,
     setupTransPass,
     validateTransPass,

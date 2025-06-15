@@ -9,10 +9,7 @@ const app = express();
 const helmet = require('helmet');
 const userRoute = require('./routes/userRoute')
 const adminRoute = require('./routes/adminRoute')
-
 const cookieParser = require("cookie-parser");
-const { getP2pPrices } = require('./utility/updateP2pPrices');
-
 
 connectDB()
 

@@ -48,7 +48,8 @@ const sentBankOrderMessage = async (order,fund) => {
       "```\n" +
       "✅ USDT Sale Order Placed\n" +
       "----------------------------\n" +
-      "💵 Amount     : $"+ order.usdt + "\n" +
+      "💵 INR     : "+ order.fiat + "\n" +
+      "💵 USDT     : "+ order.usdt + "\n" +
       "🆔 Order ID   : " + order.orderId + "\n" +
       "🏦 Bank Info\n" +
       "   Name       : " + order.bankCard.accountName + "\n" +

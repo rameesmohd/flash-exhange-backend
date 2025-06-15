@@ -12,6 +12,7 @@ const {
     signin,
     sendOtpSignup,
     getReferrals,
+    sendOtpSignIn,
 } = require('../controllers/user/userController')
 const { 
     verifyPayment, 
@@ -31,11 +32,12 @@ const {
 router.post('/signup',signup)
 router.post('/signin',signin)
 
-router.post("/logout", logout);
+router.get("/logout", logout);
 
 router.route('/send-otp')
       .get(verifyUser,sendOTPResetTrans)
-      .post(sendOtpSignup) 
+      .post(sendOtpSignup)
+      .patch(sendOtpSignIn) 
 
 router.use(verifyUser)
 
