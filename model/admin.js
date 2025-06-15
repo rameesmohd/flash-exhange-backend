@@ -40,7 +40,8 @@ const adminSchema= new Schema({
             type : String
         },
         networkFee : {
-            type: Number
+            type: Number,
+            default : 5
         },
         otherExchangeRates: [
             {

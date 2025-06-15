@@ -293,59 +293,6 @@ const generateUniqueWithdrawTransactionId = async () => {
     return transactionId;
     };
 
-// const submitWithdraw=async(req,res)=>{
-//     try {
-//         const validation = await validateTransPass(req);
-//         if (!validation.success) {
-//             return res.status(validation.status).json({ success: false, message: validation.message });
-//         }
-        
-//         const { addressId } = req.body
-//         const amount = Number(req.body.amount)
-//         const user = req.user
-//         const address = await addressModel.findOne({_id : addressId,userId:user._id})
-        
-
-//         if(!address){
-//             return res.status(200).json({success : false,message : "Invalid reciever address"})
-//         }
-
-//         if(amount > user.availableBalance){
-//             return res.status(200).json({success : false,message : "Insufficient available balance"})
-//         }
-
-//         const newTransactionId = await generateUniqueWithdrawTransactionId()
-//         const newWithdraw = new withdrawModel({
-//             userId : user._id,
-//             amount ,
-//             recieveAddress : address.address,
-//             transactionId : newTransactionId
-//         })
-//         const availableBalance = user.availableBalance-amount
-//         const processing = user.processing + amount
-//         const totalBalance = availableBalance+processing
-//         const updatedUser = await userModel.findOneAndUpdate(
-//             { _id: user._id },
-//             {
-//                 $set: {
-//                 totalBalance,
-//                 processing,
-//                 availableBalance
-//                 }
-//             },
-//             {
-//                 new: true ,
-//                 fields: { transactionPassword: 0 },
-//             }
-//         );
-//         await newWithdraw.save()
-//         return res.status(200).json({success: true,message : "Withdraw submited successfully",withdraw:newWithdraw,user:updatedUser})
-//     } catch (error) {
-//         console.log(error)
-//         return res.status(500).json({success: false , message : "Server error"})
-//     }
-// }
-
 const submitWithdraw = async (req, res) => {
   const session = await mongoose.startSession();
 
@@ -378,7 +325,7 @@ const submitWithdraw = async (req, res) => {
     const newWithdraw = new withdrawModel({
       userId: user._id,
       amount,
-      recieveAddress: address.address,
+      receiveAddress: address.address,
       transactionId: newTransactionId,
     });
 
