@@ -29,7 +29,7 @@ const withdrawSchema = new Schema(
     },
     txid: {
       type: String,
-      unique: true,
+      index:true,
       sparse: true,
       trim: true,
       default: null,
