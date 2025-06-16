@@ -117,7 +117,11 @@ const verifyPayment = async (req, res) => {
       return res.status(400).json({success: false,message : "Invalid request"})
     }
 
-    const deposit = await depositModel.findOne({ _id: id, status: "pending" }).session(session);
+    const deposit = await depositModel
+      .findOne({ _id: id, status: "pending" })
+      .populate('recieveAddress')
+      .session(session);
+
     if (!deposit) {
       await session.abortTransaction();
       return res.status(400).json({ success: false, message: "Deposit request not found or already processed." });
@@ -128,9 +132,9 @@ const verifyPayment = async (req, res) => {
       await session.abortTransaction();
       return res.status(400).json({ success: false, message: "This transaction ID has already been used." });
     }
-
+    
     const tronWeb = createTronWebInstance(process.env.PRIVATE_KEY);
-    const expectedToAddress = process.env.MAIN_ADDRESS;
+    const expectedToAddress = deposit.recieveAddress.address;
     const expectedAmount = deposit.amount;
     const contractAddress = USDT_CONTRACT_ADDRESS;
 
@@ -161,7 +165,9 @@ const verifyPayment = async (req, res) => {
 
     const toAddress = tronWeb.address.fromHex(toHex);
     const amount = parseInt(amountHex, 16) / 1e6;
+    console.log(toAddress ,"toAddress");
 
+    
     const isSuccessful = txReceipt.receipt?.result === "SUCCESS";
     const isToAddressValid = toAddress === expectedToAddress;
     const isAmountValid = amount === expectedAmount;

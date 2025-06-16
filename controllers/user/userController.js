@@ -318,7 +318,7 @@ const sendOTPResetTrans = async(req,res)=>{
             await resend.emails.send({
               from: process.env.NOREPLY_WEBSITE_MAIL,
         to: user.email,
-        subject: 'Email Verification - E Value Trade',
+        subject: 'Email Verification - eValueTrade',
         html: `
           <div style="font-family: sans-serif; padding: 10px;">
             <h2 style="color: #333;">Your Verification Code</h2>
@@ -326,7 +326,7 @@ const sendOTPResetTrans = async(req,res)=>{
             <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
             <p>This code will expire in 10 minutes.</p>
               <br/>
-              <p>Thanks,<br/>E Value Trade Team</p>
+              <p>Thanks,<br/>eValueTrade Team</p>
             </div>
             `,
         });
@@ -448,7 +448,7 @@ const sendOtpSignIn = async (req, res) => {
         await resend.emails.send({
           from: process.env.NOREPLY_WEBSITE_MAIL,
           to: email,
-          subject: 'Email Verification - E Value Trade',
+          subject: 'Email Verification - eValueTrade',
           html: `
             <div style="font-family: sans-serif; padding: 10px;">
               <h2 style="color: #333;">Your Verification Code</h2>
@@ -456,7 +456,7 @@ const sendOtpSignIn = async (req, res) => {
               <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
               <p>This code will expire in 10 minutes.</p>
               <br/>
-              <p>Thanks,<br/>E Value Trade Team</p>
+              <p>Thanks,<br/>eValueTrade Team</p>
             </div>
           `,
         });
@@ -516,7 +516,7 @@ const sendOtpSignup = async (req, res) => {
         await resend.emails.send({
           from: process.env.NOREPLY_WEBSITE_MAIL,
           to: email,
-          subject: 'Email Verification - E Value Trade',
+          subject: 'Email Verification - eValueTrade',
           html: `
             <div style="font-family: sans-serif; padding: 10px;">
               <h2 style="color: #333;">Your Verification Code</h2>
@@ -524,7 +524,7 @@ const sendOtpSignup = async (req, res) => {
               <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
               <p>This code will expire in 10 minutes.</p>
               <br/>
-              <p>Thanks,<br/>E Value Trade Team</p>
+              <p>Thanks,<br/>eValueTrade Team</p>
             </div>
           `,
         });
