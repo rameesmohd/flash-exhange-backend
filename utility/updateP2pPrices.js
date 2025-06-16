@@ -35,9 +35,6 @@ const getP2pPrices = async () => {
     }
   }
 
-    getP2pPrices()
-
-
   module.exports = {
     getP2pPrices
   }

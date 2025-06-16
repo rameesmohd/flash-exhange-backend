@@ -5,12 +5,10 @@ const JWT_SECRET = process.env.JWT_SECRET
 const  verifyUser = async(req, res, next) => {
   try {
     const token = req.cookies.userToken;
-    console.log(token,'aaaaaaaaaaaaaaaaaaaa');
     
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
     const decoded = jwt.verify(token, JWT_SECRET);
-      console.log(decoded);
     const user = await userModel.findById({_id :decoded.userId});
     
     if (!user || user.currentToken !== token) {

@@ -311,28 +311,34 @@ const sendOTPResetTrans = async(req,res)=>{
     })
     await newOtp.save()
 
-    try {
-    await resend.emails.send({
-      from: process.env.NOREPLY_WEBSITE_MAIL,
-      to: user.email,
-      subject: 'Email Verification - E Value Trade',
-      html: `
-        <div style="font-family: sans-serif; padding: 10px;">
-          <h2 style="color: #333;">Your Verification Code</h2>
-          <p>Use the OTP below to verify your email:</p>
-          <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
-          <p>This code will expire in 10 minutes.</p>
-            <br/>
-            <p>Thanks,<br/>E Value Trade Team</p>
-          </div>
-        `,
-      });
-    } catch (emailError) {
-      console.error('Error sending email:', emailError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to send verification email. Please try again.',
-      });
+
+    if (process.env.NODE_ENV === "production") {
+      try {
+
+            await resend.emails.send({
+              from: process.env.NOREPLY_WEBSITE_MAIL,
+        to: user.email,
+        subject: 'Email Verification - E Value Trade',
+        html: `
+          <div style="font-family: sans-serif; padding: 10px;">
+            <h2 style="color: #333;">Your Verification Code</h2>
+            <p>Use the OTP below to verify your email:</p>
+            <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
+            <p>This code will expire in 10 minutes.</p>
+              <br/>
+              <p>Thanks,<br/>E Value Trade Team</p>
+            </div>
+            `,
+        });
+      } catch (emailError) {
+        console.error('Error sending email:', emailError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send verification email. Please try again.',
+        });
+      }
+    }else {
+       console.log(`Development Mode: OTP for ${user.email} is ${OTP}`);
     }
     
     return res.status(200).json({
