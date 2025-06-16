@@ -218,7 +218,7 @@ const verifyPayment = async (req, res) => {
     } else {
       await session.abortTransaction();
       if (!isToAddressValid) {
-        return res.status(400).json({ success: false, message: "Transaction sent to the wrong address." });
+        return res.status(400).json({ success: false, message: "Invalid transaction hash. Please check and resubmit."});
       }
       if (amount > 1 && !isAmountValid) {
         return res.status(400).json({ success: false, message: "Transaction amount mismatch." });
