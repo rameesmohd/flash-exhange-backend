@@ -113,6 +113,10 @@ const verifyPayment = async (req, res) => {
     const { txid, id } = req.body;
     const user = req.user;
 
+    if(!txid||!id||!user){
+      return res.status(400).json({success: false,message : "Invalid request"})
+    }
+
     const deposit = await depositModel.findOne({ _id: id, status: "pending" }).session(session);
     if (!deposit) {
       await session.abortTransaction();
@@ -170,7 +174,19 @@ const verifyPayment = async (req, res) => {
         { session }
       );
 
-      // Re-fetch user inside transaction (optional but cleaner)
+      // Optional: Refetch the deposit to access `recieveAddress`
+      const updatedDeposit = await depositModel.findById(id).session(session);
+
+      // Unflag the address if present
+      if (updatedDeposit?.recieveAddress) {
+        await companyAddressesModel.updateOne(
+          { _id: updatedDeposit.recieveAddress },
+          { $set: { flag: false } },
+          { session }
+        );
+      }
+
+      // Re-fetch user inside transaction (ensures consistency)
       const dbUser = await userModel.findById(user._id).session(session);
       const newTotal = Math.round((dbUser.totalBalance + amount) * 100) / 100;
       const newAvailable = Math.round((newTotal - dbUser.processing - dbUser.disputeAmount) * 100) / 100;
@@ -189,7 +205,10 @@ const verifyPayment = async (req, res) => {
       await session.commitTransaction();
       session.endSession();
 
-      return res.status(200).json({ success: true, message: "Deposit verified and credited successfully." });
+      return res.status(200).json({
+        success: true,
+        message: "Deposit verified and credited successfully.",
+      });
     } else {
       await session.abortTransaction();
       if (!isToAddressValid) {
@@ -208,6 +227,43 @@ const verifyPayment = async (req, res) => {
   }
 };
 
+const cancelDeposit = async (req, res) => {
+  try {
+    const { id } = req.query;
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: "Deposit ID is required." });
+    }
+
+    const deposit = await depositModel.findOneAndUpdate(
+      { _id: id, status: "pending" },
+      { $set: { status: "failed" } },
+      { new: true }
+    );
+
+    if (!deposit) {
+      return res.status(404).json({ success: false, message: "Deposit not found or already processed." });
+    }
+
+    if (deposit.recieveAddress) {
+      await companyAddressesModel.updateOne(
+        { _id: deposit.recieveAddress },
+        { $set: { flag: false } }
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Deposit cancelled successfully.",
+    });
+  } catch (error) {
+    console.error("Cancel Deposit Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
 
 const fetchMainAddress=async(req,res)=>{
     try {
@@ -222,7 +278,7 @@ const fetchMainAddress=async(req,res)=>{
 const fetchDepositHistory=async(req,res)=>{
     try {
         const user = req.user
-        const deposits = await depositModel.find({userId: user._id}).populate("recieveAddress");
+        const deposits = await depositModel.find({userId: user._id}).populate("recieveAddress").sort({createdAt:-1});
         res.status(200).json({success : true,deposits})
     } catch (error) {
         console.log(error);
@@ -371,7 +427,7 @@ const submitWithdraw = async (req, res) => {
 const fetchWithdrawHistory=async(req,res)=>{
     try {
         const user = req.user
-        const withdraws = await withdrawModel.find({userId : user._id})
+        const withdraws = await withdrawModel.find({userId : user._id}).sort({createdAt : -1})
         return res.status(200).json({success : true,withdraws})
     } catch (error) {
         console.log(error)
@@ -386,6 +442,7 @@ module.exports ={
     createDeposit,
     verifyPayment,
     fetchDepositHistory,
+    cancelDeposit,
 
     //Address
     saveAddress,

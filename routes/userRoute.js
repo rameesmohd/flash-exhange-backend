@@ -21,7 +21,8 @@ const {
     fetchAddress,
     saveAddress,
     submitWithdraw,
-    fetchWithdrawHistory
+    fetchWithdrawHistory,
+    cancelDeposit
 } = require('../controllers/user/paymentController');
 const { 
     fetchFunds, 
@@ -50,6 +51,7 @@ router.route('/deposit')
       .get(fetchDepositHistory)
       .post(createDeposit)
       .patch(verifyPayment)
+      .delete(cancelDeposit)
 
 router.route("/withdraw")
       .get(fetchWithdrawHistory)
