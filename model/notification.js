@@ -2,15 +2,19 @@ const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema(
   {
-    message: {
+    phone: {
       type: String,
-      required: true,
+      required: true
     },
-    createdAt: {
+    amount: {
+      type: Number,
+      required: true
+    },
+    timestamp: {
       type: Date,
-      default: Date.now,
-      expires: 86400, // Optional: expire after 1 day if you use a non-capped collection
-    },
+      required: true,
+      default: Date.now
+    }
   },
   {
     capped: {
