@@ -8,6 +8,7 @@ const bcrypt = require("bcrypt");
 const otpModel = require('../../model/otp');
 const { Resend } = require("resend");
 const referralModel = require('../../model/referrals');
+const notification = require('../../model/notification');
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 
 const createToken = (userId) => {
@@ -572,6 +573,18 @@ const getReferrals=async(req,res)=>{
   }
 }
 
+const getNotifications=async(req,res)=>{
+  try {
+    const notifications = await notification.find().sort({ createdAt: -1 });
+    res.status(200).json({success: true, notifications});
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+}
+
 module.exports={
     signup,
     sendOtpSignup,
@@ -587,5 +600,7 @@ module.exports={
     setupTransPass,
     validateTransPass,
 
-    getReferrals
+    getReferrals,
+
+    getNotifications
 }

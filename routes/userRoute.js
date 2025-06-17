@@ -13,6 +13,7 @@ const {
     sendOtpSignup,
     getReferrals,
     sendOtpSignIn,
+    getNotifications,
 } = require('../controllers/user/userController')
 const { 
     verifyPayment, 
@@ -29,6 +30,8 @@ const {
     createOrder, 
     fetchOrders
 } = require('../controllers/user/orderController');
+
+router.get('/notifications',getNotifications)
 
 router.post('/signup',signup)
 router.post('/signin',signin)

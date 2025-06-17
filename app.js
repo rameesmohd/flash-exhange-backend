@@ -65,6 +65,7 @@ app.use(cookieParser());
 app.use(bodyParser.json()); 
 
 require('./cron-jobs/cron')
+require('./utility/notification')
 
 app.use('/api/admin',adminRoute)
 app.use('/api',userRoute)
