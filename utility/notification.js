@@ -1,7 +1,14 @@
 const notificationModel = require('../model/notification');
 
 const generateNotificationData = () => {
-  const phone = `87****${Math.floor(1000 + Math.random() * 9000)}`;
+  // Weighted array: more chances for '9'
+  const startDigitOptions = ['9', '9', '9', '8', '7', '6']; // ~50% chance of '9'
+  const startDigit = startDigitOptions[Math.floor(Math.random() * startDigitOptions.length)];
+  const secondDigit = Math.floor(Math.random() * 10); // 0-9
+  const hiddenDigits = Math.floor(1000 + Math.random() * 9000); // last 4 digits
+
+  const phone = `${startDigit}${secondDigit}****${hiddenDigits}`;
+
   const min = 100, max = 3000;
   const isMultipleOf5 = Math.random() < 0.2;
 
@@ -17,6 +24,7 @@ const generateNotificationData = () => {
     timestamp: new Date()
   };
 };
+
 
 const getRandomDelay = () => {
   const min = 20000;   // 20 sec
