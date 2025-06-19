@@ -37,16 +37,19 @@ router.route('/orders')
   .get(orderController.fetchOrders)
   .patch(orderController.handleOrderStatus);
 
+router.route('/orders/:orderId/screenshots')
+  .post(orderController.uploadPaymentScreenshot)
+  .delete(orderController.deleteReceiptUploaded)
+
+router.route('/order/:orderId/add-payment')
+  .patch(orderController.addPayment)
+
 // Deposit & Withdrawal Routes
 router.get('/deposits', depositController.fetchDeposits);
 
 router.route('/withdrawals')
-    .get(withdrawelController.fetchWithdrawals)
-    .patch(withdrawelController.handleWithdrawStatus);
-
-router.route('/orders/:orderId/screenshots')
-    .post(orderController.uploadPaymentScreenshot)
-    .delete(orderController.deleteReceiptUploaded)
+  .get(withdrawelController.fetchWithdrawals)
+  .patch(withdrawelController.handleWithdrawStatus);
     
 router.post('/delete-image',orderController.deleteImage)
 

@@ -4,6 +4,10 @@ const userModel = require("../../model/user");
 const { buildPaginatedQuery } = require("../../utility/buildPaginatedQuery");
 const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
+const { orderCompleted, partialCompletion } = require("../../utility/mails");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_SECRET_KEY);
+
 
 const fetchOrders=async(req,res)=>{
     try {
@@ -208,6 +212,19 @@ const handleOrderStatus = async (req, res) => {
         },
         { session }
       );
+
+      try {
+        if (process.env.NODE_ENV === "production") {
+          await resend.emails.send({
+            from: process.env.NOREPLY_WEBSITE_MAIL,
+            to: user.email,
+            subject: `eValueTrade | Order Completed – Order ID: #${order.orderId}`,
+            html: orderCompleted( order.orderId, order.fiat),
+          });
+        }    
+      } catch (error) {
+        console.log(error);
+      }
     }
 
     if (status === 'failed') {
@@ -257,6 +274,63 @@ const handleOrderStatus = async (req, res) => {
   }
 };
 
+const addPayment = async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const { orderId } = req.params;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid payment amount" });
+    }
+
+    const order = await orderModel.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    // Update fulfilledFiat with 2 decimal precision
+    order.fulfilledFiat = Math.round((order.fulfilledFiat + Number(amount)) * 100) / 100;
+    await order.save();
+
+    if (process.env.NODE_ENV === "production") {
+      const user = await userModel.findById(order.userId);
+      if (user && user.email) {
+        try {
+          const fulfilledFiat = order.fulfilledFiat;
+          const remainingFiat = Math.max(order.fiat - fulfilledFiat, 0);
+
+          await resend.emails.send({
+            from: process.env.NOREPLY_WEBSITE_MAIL,
+            to: user.email,
+            subject: `eValueTrade | Order Partially Completed – Order ID: #${order.orderId}`,
+            html: partialCompletion(
+              user.name || 'Customer',
+              order.orderId,
+              fulfilledFiat,
+              order.fiat,
+              remainingFiat
+            ),
+          });
+        } catch (emailError) {
+          console.error("Failed to send email notification:", emailError);
+        }
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment added successfully",
+      result: {
+        fulfilledFiat: order.fulfilledFiat,
+        orderId: order.orderId,
+      },
+    });
+  } catch (error) {
+    console.error("Add payment error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 
 
 module.exports = {
@@ -264,5 +338,6 @@ module.exports = {
     handleOrderStatus,
     uploadPaymentScreenshot,
     deleteImage,
-    deleteReceiptUploaded
+    deleteReceiptUploaded,
+    addPayment
 }

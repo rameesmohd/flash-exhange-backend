@@ -186,6 +186,7 @@ const createOrder = async (req, res) => {
         ? {
             mode: bankDoc.mode,
             upi: bankDoc.upi, // ✅ Correct: assigning the actual UPI ID
+            accountName : bankDoc.accountName
           }
         : {
             mode: bankDoc.mode,

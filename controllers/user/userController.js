@@ -245,10 +245,11 @@ const addBankCard=async(req,res)=>{
       if (!upiRegex.test(upi)) {
         return res.status(400).json({ success: false, message: "Invalid UPI ID" });
       }
-
+      
       const newBankCard = new bankCardModel({
         userId: user._id,
         upi,
+        accountName,
         mode
       });
       await newBankCard.save();

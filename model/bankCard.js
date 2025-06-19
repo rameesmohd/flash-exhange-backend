@@ -55,7 +55,7 @@ bankCardSchema.pre("save", function (next) {
     if (!this.upi) {
       return next(new Error("UPI ID is required when mode is 'upi'."));
     }
-    this.accountNumber = this.ifsc = this.accountName = null;
+    this.accountNumber = this.ifsc = null;
   }
 
   next();
