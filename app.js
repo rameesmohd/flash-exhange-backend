@@ -34,12 +34,11 @@ app.use(helmet({
 app.set('trust proxy', 1);
 
 const allowedOrigins = [
-  "https://app.evaluetrade.com",
-  "https://admin.evaluetrade.com",
+  "https://app.evaluetrade.in",
+  "https://admin.evaluetrade.in",
   "http://localhost:5173",
   "http://localhost:3001",
   "http://localhost:4173",
-  "https://flash-exchange-frontend.vercel.app",
 ];
 
 const corsOptions = {
