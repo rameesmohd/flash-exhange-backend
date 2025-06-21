@@ -9,6 +9,7 @@ const otpModel = require('../../model/otp');
 const { Resend } = require("resend");
 const referralModel = require('../../model/referrals');
 const notification = require('../../model/notification');
+const { otpVerification } = require('../../utility/mails');
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 
 const createToken = (userId) => {
@@ -317,20 +318,11 @@ const sendOTPResetTrans = async(req,res)=>{
     if (process.env.NODE_ENV === "production") {
       try {
 
-            await resend.emails.send({
-              from: process.env.NOREPLY_WEBSITE_MAIL,
-        to: user.email,
-        subject: 'Email Verification - eValueTrade',
-        html: `
-          <div style="font-family: sans-serif; padding: 10px;">
-            <h2 style="color: #333;">Your Verification Code</h2>
-            <p>Use the OTP below to verify your email:</p>
-            <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
-            <p>This code will expire in 10 minutes.</p>
-              <br/>
-              <p>Thanks,<br/>eValueTrade Team</p>
-            </div>
-            `,
+        await resend.emails.send({
+          from: process.env.NOREPLY_WEBSITE_MAIL,
+          to: user.email,
+          subject: 'Email Verification - eValueTrade',
+          html: otpVerification(OTP),
         });
       } catch (emailError) {
         console.error('Error sending email:', emailError);
@@ -451,16 +443,7 @@ const sendOtpSignIn = async (req, res) => {
           from: process.env.NOREPLY_WEBSITE_MAIL,
           to: email,
           subject: 'Email Verification - eValueTrade',
-          html: `
-            <div style="font-family: sans-serif; padding: 10px;">
-              <h2 style="color: #333;">Your Verification Code</h2>
-              <p>Use the OTP below to verify your email:</p>
-              <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
-              <p>This code will expire in 10 minutes.</p>
-              <br/>
-              <p>Thanks,<br/>eValueTrade Team</p>
-            </div>
-          `,
+          html: otpVerification(OTP),
         });
       } catch (emailError) {
         console.error('Error sending email:', emailError);
@@ -519,16 +502,7 @@ const sendOtpSignup = async (req, res) => {
           from: process.env.NOREPLY_WEBSITE_MAIL,
           to: email,
           subject: 'Email Verification - eValueTrade',
-          html: `
-            <div style="font-family: sans-serif; padding: 10px;">
-              <h2 style="color: #333;">Your Verification Code</h2>
-              <p>Use the OTP below to verify your email:</p>
-              <div style="font-size: 24px; font-weight: bold; margin: 10px 0;">${OTP}</div>
-              <p>This code will expire in 10 minutes.</p>
-              <br/>
-              <p>Thanks,<br/>eValueTrade Team</p>
-            </div>
-          `,
+          html: otpVerification(OTP),
         });
       } catch (emailError) {
         console.error('Error sending email:', emailError);

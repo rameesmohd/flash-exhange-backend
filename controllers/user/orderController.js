@@ -52,9 +52,9 @@ const sentBankOrderMessage = async (order,fund) => {
       "💵 USDT     : "+ order.usdt + "\n" +
       "🆔 Order ID   : " + order.orderId + "\n" +
       "🏦 Bank Info\n" +
-      "   Name       : " + order.bankCard.accountName + "\n" +
-      "   Account No : " + order.bankCard.accountNumber + "\n" +
-      "   IFSC       : " + order.bankCard.ifsc + "\n" +
+      "   Name       : " + order.bankCard?.accountName + "\n" +
+      "   Account No : " + order.bankCard?.accountNumber + "\n" +
+      "   IFSC       : " + order.bankCard?.ifsc + "\n" +
       "```";
 
       const url = `https://api.telegram.org/bot${fund.teleApi}/sendMessage`;
@@ -99,10 +99,11 @@ const sentUpiOrderMessage = async (order, fund) => {
     "```\n" +
     "✅ USDT Sale Order Placed\n" +
     "----------------------------\n" +
-    "💵 Amount     : $" + order.usdt + "\n" +
-    "🆔 Order ID   : " + order.orderId + "\n" +
+    "💵 Amount     : $" + order?.usdt + "\n" +
+    "🆔 Order ID   : " + order?.orderId + "\n" +
     "🏦 UPI Info\n" +
-    "   UPI       : " + order.bankCard.upi + "\n" +
+    "   Name       : " + order?.bankCard?.accountName + "\n" +
+    "   UPI       : " + order?.bankCard?.upi + "\n" +
     "```";
 
   try {
