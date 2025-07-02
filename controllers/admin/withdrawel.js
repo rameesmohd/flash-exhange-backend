@@ -51,7 +51,7 @@ const handleWithdrawStatus = async(req,res)=>{
    const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { status, id } = req.body;
+    const { status, id ,txid } = req.body;
 
     const validStatuses = ['success', 'failed', 'dispute'];
     if (!status || !id) {
@@ -59,6 +59,14 @@ const handleWithdrawStatus = async(req,res)=>{
       return res.status(400).json({
         success: false,
         message: 'Both status and order ID are required.',
+      });
+    }
+
+    if(status==='success' && !txid){
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: 'Txid required.',
       });
     }
 
@@ -71,6 +79,7 @@ const handleWithdrawStatus = async(req,res)=>{
     }
 
     const withdraw = await withdrawModel.findById(id).session(session);
+
     if (!withdraw) {
       await session.abortTransaction();
       return res.status(404).json({
@@ -79,15 +88,8 @@ const handleWithdrawStatus = async(req,res)=>{
       });
     }
 
-    // if (withdraw.status === 'success') {
-    //   await session.abortTransaction();
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'withdraw already marked as success.',
-    //   });
-    // }
-
     withdraw.status = status;
+    withdraw.txid = txid
     await withdraw.save({ session });
     
     if (status === 'success') {
