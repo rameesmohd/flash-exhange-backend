@@ -36,6 +36,7 @@ app.set('trust proxy', 1);
 const allowedOrigins = [
   "https://www.fsquickpay.com",
   "https://fsquickpay.com",
+  "https://api.fsquickpay.com",
   "https://admin.fsquickpay.com",
   "http://localhost:5173",
   "http://localhost:3001",
