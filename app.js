@@ -34,9 +34,9 @@ app.use(helmet({
 app.set('trust proxy', 1);
 
 const allowedOrigins = [
-  "https://www.evaluetrade.in",
-  "https://evaluetrade.in",
-  "https://admin.evaluetrade.in",
+  "https://www.fsquickpay.com",
+  "https://fsquickpay.com",
+  "https://admin.fsquickpay.com",
   "http://localhost:5173",
   "http://localhost:3001",
   "http://localhost:4173",
