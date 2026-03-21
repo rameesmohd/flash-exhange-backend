@@ -149,7 +149,7 @@ const handleOrderStatus = async (req, res) => {
   session.startTransaction();
 
   try {
-    const { status, id, fulfilledFiat: rawFulfilledFiat, utr } = req.body;
+    const { status, id, fulfilledFiat: rawFulfilledFiat, UTR: utr  } = req.body;
 
     // ── Validation ────────────────────────────────────────────────
     const validStatuses = ['success', 'failed', 'dispute'];
