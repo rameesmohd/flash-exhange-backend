@@ -9,33 +9,29 @@ const fundController = require('../controllers/admin/fund');
 const orderController = require('../controllers/admin/order');
 const depositController = require('../controllers/admin/deposit');
 const withdrawelController = require('../controllers/admin/withdrawel');
-
+const Dashboard = require('../controllers/admin/dashboardStatus')
 
 router.post('/login',adminController.login);
 
 router.use(verifyUser);
 
-// User Routes
+router.get("/dashboard/stats",Dashboard.getDashboardStats );
+
 router.get('/users', adminController.fetchUsers);
 router.post('/change-email', adminController.changeUserEmail);
 
-// Fund Address
 router.route('/address')
   .get(adminController.fetchCompanyAddress)
   .post(adminController.addCompanyAddress)
   .patch(adminController.updateAddress);
 
-// Fund Routes
 router.route('/fund')
   .get(fundController.fetchFunds)
   .post(fundController.addFunds)
   .patch(fundController.updateFund);
 router.patch('/fund/:id/update-status', fundController.updateFundStatus);
 
-// Order Routes
-router.route('/orders')
-  .get(orderController.fetchOrders)
-  .patch(orderController.handleOrderStatus);
+router.get("/orders/stats",orderController.fetchOrderStats)
 
 router.route('/orders/:orderId/screenshots')
   .post(orderController.uploadPaymentScreenshot)
@@ -44,13 +40,22 @@ router.route('/orders/:orderId/screenshots')
 router.route('/order/:orderId/add-payment')
   .patch(orderController.addPayment)
 
-// Deposit & Withdrawal Routes
+router.route('/orders')
+  .get(orderController.fetchOrders)
+  .patch(orderController.handleOrderStatus);
+
 router.get('/deposits', depositController.fetchDeposits);
+router.get("/deposits/stats", depositController.fetchDepositStats );
 
 router.route('/withdrawals')
   .get(withdrawelController.fetchWithdrawals)
   .patch(withdrawelController.handleWithdrawStatus);
+
+router.get("/withdrawals/stats", withdrawelController.fetchWithdrawalStats );
     
 router.post('/delete-image',orderController.deleteImage)
+
+router.post('/add-to-wallet',depositController.addDepositsToUser)
+
 
 module.exports = router;

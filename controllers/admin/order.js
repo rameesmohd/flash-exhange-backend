@@ -7,79 +7,79 @@ const fs = require("fs");
 const { orderCompleted, partialCompletion } = require("../../utility/mails");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
+const roundTo2 = (n) => Math.round(n * 100) / 100;
 
-
-const fetchOrders=async(req,res)=>{
-    try {
-        let orderIds = [];   
-        if (req.query.search) {
-            const searchRegex = new RegExp(req.query.search, 'i');
-            const matchedOrders = await orderModel
-                .find({ orderId: searchRegex })
-                .select('_id');
-            orderIds = matchedOrders.map((u) => u._id);
-        }    
-
-        const { query, skip, limit, page } = buildPaginatedQuery(
-            req.query,
-            ['orderId'],
-            { orderIds }
-        );
-          
-        // Total count for pagination
-        const total = await orderModel.countDocuments(query);
-    
-        // Paginated results
-        const orders = await orderModel
-            .find(query)
-            .populate({ path: 'fund userId', select: 'type rate teleChannel email' })
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        // const totalAmountAgg = await depositModel.aggregate([
-        //     { $match: query },
-        //     {
-        //         $group: {
-        //         _id: null,
-        //         totalDepositedAmount: { $sum: { $toDouble: "$amount" } }
-        //         }
-        //     }
-        // ]);
-            
-        const totalDepositedAmount = 0
-        // totalAmountAgg[0]?.totalDepositedAmount || 0;
-
-        return res.status(200).json({
-            orders : orders,
-            total, 
-            currentPage: page,
-            totalDepositedAmount
-        })
-    } catch (error) {
-        console.error(error)
-        res.status(500).json({success: false,message : "Server error"})
-    }
+function buildBaseQuery(reqQuery) {
+  const { status, from, to } = reqQuery;
+  const query = {};
+ 
+  if (status) query.status = status;
+ 
+  if (from || to) {
+    query.createdAt = {};
+    if (from) query.createdAt.$gte = new Date(from);
+    if (to)   query.createdAt.$lte = new Date(to);
+  }
+ 
+  return query;
 }
 
-const uploadToCloudinary = (filePath) => {
-    return new Promise((resolve, reject) => {
-      cloudinary.uploader.upload(
-        filePath,
-        { folder: "screenshots", resource_type: "auto" },
-        (error, result) => {
-          if (error) {
-            reject(error);
-          } else {
-            // 🔹 Delete local file after successful upload
-            fs.unlink(filePath, (err) => {
-              if (err) console.error("Failed to delete file:", err);
-            });
-            resolve(result.secure_url);
-          }
-        }
-      );
+const fetchOrders = async (req, res) => {
+  try {
+    const {
+      search = '',
+      currentPage = 1,
+      pageSize = 10,
+    } = req.query;
+ 
+    const page  = Math.max(1, parseInt(currentPage, 10));
+    const limit = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
+    const skip  = (page - 1) * limit;
+ 
+    // Base query (status + date range)
+    const baseQuery = buildBaseQuery(req.query);
+ 
+    // Search across orderId, bankCard.accountNumber, bankCard.accountName
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      baseQuery.$or = [
+        { orderId: searchRegex },
+        { 'bankCard.accountNumber': searchRegex },
+        { 'bankCard.accountName':   searchRegex },
+        { 'bankCard.upi':           searchRegex },
+      ];
+    }
+ 
+    const [total, orders, completedAgg] = await Promise.all([
+      orderModel.countDocuments(baseQuery),
+ 
+      orderModel
+        .find(baseQuery)
+        .populate({ path: 'fund userId', select: 'type rate teleChannel email status' })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+ 
+      // Total completed (success) fiat amount for the current filter
+      // orderModel.aggregate([
+      //   { $match: { ...baseQuery, status: 'success' } },
+      //   { $group: { _id: null, total: { $sum: '$fiat' } } },
+      // ]),
+    ]);
+ 
+    // const totalCompletedAmount = completedAgg[0]?.total || 0;
+ 
+    return res.status(200).json({
+      success: true,
+      orders,
+      total,
+      currentPage: page,
+      // totalCompletedAmount,
     });
+  } catch (error) {
+    console.error('fetchOrders error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
 };
 
 const deleteImage = async (req, res) => {
@@ -144,14 +144,16 @@ const deleteReceiptUploaded = async (req, res) => {
   }
 };
 
-
 const handleOrderStatus = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  try {
-    const { status, id } = req.body;
 
+  try {
+    const { status, id, fulfilledFiat: rawFulfilledFiat, utr } = req.body;
+
+    // ── Validation ────────────────────────────────────────────────
     const validStatuses = ['success', 'failed', 'dispute'];
+
     if (!status || !id) {
       await session.abortTransaction();
       return res.status(400).json({
@@ -164,93 +166,124 @@ const handleOrderStatus = async (req, res) => {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: 'Invalid status value.',
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}.`,
       });
     }
 
-    const order = await orderModel.findById(id).session(session);
-    if (!order) {
-      await session.abortTransaction();
-      return res.status(404).json({
-        success: false,
-        message: 'Order not found.',
-      });
-    }
-
-    // if (order.status === 'success') {
-    //   await session.abortTransaction();
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: 'Order already marked as success.',
-    //   });
-    // }
-
-    order.status = status;
-    await order.save({ session });
-    
+    // UTR is required when marking an order as success
     if (status === 'success') {
-      const user = await userModel.findById(order.userId).session(session);
-      if (!user) {
+      if (!utr || !String(utr).trim()) {
         await session.abortTransaction();
-        return res.status(404).json({
+        return res.status(400).json({
           success: false,
-          message: 'User not found.',
+          message: 'UTR is required when marking an order as success.',
         });
       }
 
-      // Calculate new balances (rounded to 2 decimals)
-      const processing = Number((user.processing - order.usdt).toFixed(2));
-      const totalBalance = Number((processing + user.availableBalance).toFixed(2));
+      // UTR format check — alphanumeric, 6–22 chars (covers NEFT/IMPS/UPI/RTGS)
+      const utrClean = String(utr).trim();
+      if (!/^[A-Za-z0-9]{6,22}$/.test(utrClean)) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid UTR format. Must be 6–22 alphanumeric characters.',
+        });
+      }
+
+      // Check for duplicate UTR across all orders
+      const duplicate = await orderModel
+        .findOne({ UTR: utrClean, _id: { $ne: id } })
+        .session(session)
+        .lean();
+
+      if (duplicate) {
+        await session.abortTransaction();
+        return res.status(409).json({
+          success: false,
+          message: `UTR "${utrClean}" is already linked to another order (#${duplicate.orderId}).`,
+        });
+      }
+    }
+
+    // ── Fetch order ───────────────────────────────────────────────
+    const order = await orderModel.findById(id).session(session);
+    if (!order) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Order not found.' });
+    }
+
+    if (!['pending', 'processing', 'dispute'].includes(order.status)) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: `Cannot update an order that is already "${order.status}".`,
+      });
+    }
+
+    // ── Resolve fulfilledFiat ─────────────────────────────────────
+    let resolvedFulfilledFiat = 0;
+
+    if (status === 'success') {
+      const parsed = parseFloat(rawFulfilledFiat);
+
+      if (!rawFulfilledFiat || isNaN(parsed) || parsed <= 0) {
+        resolvedFulfilledFiat = order.fiat;
+      } else {
+        resolvedFulfilledFiat = roundTo2(Math.min(parsed, order.fiat));
+      }
+    }
+
+    // ── Update order ──────────────────────────────────────────────
+    order.status = status;
+
+    if (status === 'success') {
+      order.fulfilledFiat = roundTo2(
+        Math.min((order.fulfilledFiat || 0) + resolvedFulfilledFiat, order.fiat)
+      );
+      order.UTR = String(utr).trim();
+    }
+
+    await order.save({ session }); // pre-save hook recalculates fulfilledRatio
+
+    // ── User balance updates ──────────────────────────────────────
+    const user = await userModel.findById(order.userId).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    if (status === 'success') {
+      const processing   = roundTo2(user.processing - order.usdt);
+      const totalBalance = roundTo2(processing + user.availableBalance);
 
       await userModel.updateOne(
         { _id: user._id },
-        {
-          $set: {
-            processing,
-            totalBalance,
-          },
-        },
+        { $set: { processing, totalBalance } },
         { session }
       );
 
       try {
-        if (process.env.NODE_ENV === "production") {
-          await resend.emails.send({
-            from: process.env.NOREPLY_WEBSITE_MAIL,
-            to: user.email,
-            subject: `eValueTrade | Order Completed – Order ID: #${order.orderId}`,
-            html: orderCompleted( order.orderId, order.fiat),
-          });
-        }    
-      } catch (error) {
-        console.log(error);
+        if (process.env.NODE_ENV === 'production') {
+          // await resend.emails.send({
+          //   from: process.env.NOREPLY_WEBSITE_MAIL,
+          //   to: user.email,
+          //   subject: `eValueTrade | Order Completed – Order ID: #${order.orderId}`,
+          //   html: orderCompleted(order.orderId, order.fiat),
+          // });
+        }
+      } catch (emailErr) {
+        console.error('Email send failed (non-fatal):', emailErr);
       }
     }
 
     if (status === 'failed') {
-      const user = await userModel.findById(order.userId).session(session);
-      if (!user) {
-        await session.abortTransaction();
-        return res.status(404).json({
-          success: false,
-          message: 'User not found.',
-        });
-      }
-
-      // Calculate new balances (rounded to 2 decimals)
-      const processing = Number((user.processing - order.usdt).toFixed(2));
-      const availableBalance = Number((user.availableBalance + order.usdt).toFixed(2));
-      const totalBalance = Number((processing + availableBalance).toFixed(2));
+      const processing       = roundTo2(user.processing - order.usdt);
+      const availableBalance = roundTo2(user.availableBalance + order.usdt);
+      const totalBalance     = roundTo2(processing + availableBalance);
 
       await userModel.updateOne(
         { _id: user._id },
-        {
-          $set: {
-            processing,
-            availableBalance,
-            totalBalance,
-          },
-        },
+        { $set: { processing, availableBalance, totalBalance } },
         { session }
       );
     }
@@ -266,11 +299,8 @@ const handleOrderStatus = async (req, res) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.error('Error updating order status:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Internal server error.',
-    });
+    console.error('handleOrderStatus error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
   }
 };
 
@@ -331,7 +361,42 @@ const addPayment = async (req, res) => {
   }
 };
 
-
+const fetchOrderStats = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+ 
+    const dateFilter = {};
+    if (from || to) {
+      dateFilter.createdAt = {};
+      if (from) dateFilter.createdAt.$gte = new Date(from);
+      if (to)   dateFilter.createdAt.$lte = new Date(to);
+    }
+ 
+    const agg = await orderModel.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: '$status',
+          count:  { $sum: 1 },
+          amount: { $sum: '$fiat' },
+        },
+      },
+    ]);
+ 
+    // Shape into { pending: {count, amount}, success: {count, amount}, failed: {count, amount} }
+    const stats = { pending: { count: 0, amount: 0 }, success: { count: 0, amount: 0 }, failed: { count: 0, amount: 0 } };
+    agg.forEach(({ _id, count, amount }) => {
+      if (_id && stats[_id] !== undefined) {
+        stats[_id] = { count, amount: Math.round(amount * 100) / 100 };
+      }
+    });
+ 
+    return res.status(200).json({ success: true, stats });
+  } catch (error) {
+    console.error('fetchOrderStats error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 module.exports = {
     fetchOrders,
@@ -339,5 +404,6 @@ module.exports = {
     uploadPaymentScreenshot,
     deleteImage,
     deleteReceiptUploaded,
-    addPayment
+    addPayment,
+    fetchOrderStats
 }

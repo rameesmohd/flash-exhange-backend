@@ -237,6 +237,7 @@ const addBankCard=async(req,res)=>{
         mode
       });
       await newBankCard.save();
+      console.log('SAVED DOC:', newBankCard);
 
     } else if (mode === "upi") {
       if (!upi) {
@@ -254,7 +255,9 @@ const addBankCard=async(req,res)=>{
         mode
       });
       await newBankCard.save();
+      console.log('SAVED DOC:', newBankCard);
     }
+
 
     return res.status(200).json({ success: true, message: "Bank card added successfully" });
   } catch (error) {

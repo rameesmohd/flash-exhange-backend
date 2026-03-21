@@ -6,6 +6,9 @@ const adminSchema= new Schema({
             type: String, 
             required : true
         },
+        transactionPin : {
+            type : String
+        },
         password : {
             type : String,
             required : true

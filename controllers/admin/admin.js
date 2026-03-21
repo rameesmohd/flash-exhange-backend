@@ -53,15 +53,63 @@ const login = async (req, res) => {
   }
 };
 
-const fetchUsers = async(req,res)=>{
-    try {
-        const users = await userModel.find({})
-        res.status(200).json({users,success: true})
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Server error" });
+const fetchUsers = async (req, res) => {
+  try {
+    const {
+      search = '',
+      from,
+      to,
+      currentPage = 1,
+      pageSize = 10,
+    } = req.query;
+ 
+    const page  = Math.max(1, parseInt(currentPage, 10));
+    const limit = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
+    const skip  = (page - 1) * limit;
+ 
+    // ── Base query ────────────────────────────────────────────────
+    const query = {};
+ 
+    // Date filter on createdAt (join date) — frontend sends IST-aligned UTC
+    if (from || to) {
+      query.createdAt = {};
+      if (from) query.createdAt.$gte = new Date(from);
+      if (to)   query.createdAt.$lte = new Date(to);
     }
-}
+ 
+    // Search: email or phone
+    if (search && search.trim()) {
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { email: searchRegex },
+        { phone: searchRegex },
+      ];
+    }
+ 
+    // ── Query ─────────────────────────────────────────────────────
+    const [total, users] = await Promise.all([
+      userModel.countDocuments(query),
+      userModel
+        .find(query)
+        .select('email phone createdAt availableBalance processing disputeAmount totalBalance referralCode totalReferrals')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+    ]);
+ 
+    return res.status(200).json({
+      success: true,
+      users,
+      total,
+      currentPage: page,
+    });
+  } catch (error) {
+    console.error('fetchUsers error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+ 
 
 const fetchCompanyAddress = async (req,res)=>{
     try {

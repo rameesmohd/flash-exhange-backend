@@ -25,7 +25,6 @@ const generateNotificationData = () => {
   };
 };
 
-
 const getRandomDelay = () => {
   const min = 20000;   // 20 sec
   const max = 200000;  // 200 sec
@@ -37,7 +36,7 @@ const insertRandomly = async () => {
   await notificationModel.create(data);
 
   const nextDelay = getRandomDelay();
-  console.log(`✅ Inserted: ${data.phone} sold $${data.amount} | Next in ${Math.floor(nextDelay / 1000)}s`);
+  // console.log(`✅ Inserted: ${data.phone} sold $${data.amount} | Next in ${Math.floor(nextDelay / 1000)}s`);
   setTimeout(insertRandomly, nextDelay);
 };
 

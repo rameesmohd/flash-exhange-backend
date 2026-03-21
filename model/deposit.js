@@ -11,7 +11,7 @@ const depositSchema = new Schema(
     },
     paymentMode: {
       type: String,
-      enum: ["BEP-20", "TRC-20"],
+      enum: ["BEP-20", "TRC-20","ADMIN"],
       default: "TRC-20",
       required: true,
     },
@@ -45,6 +45,9 @@ const depositSchema = new Schema(
       ref: "companyaddress",
       required: true,
     },
+    comment : {
+      type :String
+    }
   },
   {
     timestamps: true,
