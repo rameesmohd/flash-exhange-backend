@@ -404,6 +404,34 @@ const fetchOrderStats = async (req, res) => {
   }
 };
 
+const exportOrders = async (req, res) => {
+  try {
+    const { fundId, status, from, to } = req.query;
+ 
+    const query = {};
+ 
+    if (status && status !== 'all') query.status = status;
+    if (fundId && fundId !== 'all') query.fund   = fundId;
+    if (from || to) {
+      query.createdAt = {};
+      if (from) query.createdAt.$gte = new Date(from);
+      if (to)   query.createdAt.$lte = new Date(to);
+    }
+ 
+    const orders = await orderModel
+      .find(query)
+      .populate({ path: 'fund',   select: 'type rate code fundType' })
+      .populate({ path: 'userId', select: 'email' })
+      .sort({ createdAt: -1 })
+      .lean();
+ 
+    return res.status(200).json({ success: true, orders, total: orders.length });
+  } catch (error) {
+    console.error('exportOrders error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
     fetchOrders,
     handleOrderStatus,
@@ -411,5 +439,6 @@ module.exports = {
     deleteImage,
     deleteReceiptUploaded,
     addPayment,
-    fetchOrderStats
+    fetchOrderStats,
+    exportOrders
 }

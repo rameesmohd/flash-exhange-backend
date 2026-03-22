@@ -49,6 +49,7 @@ router.route('/order/:orderId/add-payment')
 router.route('/orders')
   .get(orderController.fetchOrders)
   .patch(orderController.handleOrderStatus);
+router.get('/orders/export',orderController.exportOrders)
 
 router.get('/deposits', depositController.fetchDeposits);
 router.get("/deposits/stats", depositController.fetchDepositStats );
