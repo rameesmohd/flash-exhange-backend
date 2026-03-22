@@ -27,19 +27,26 @@ function buildBaseQuery(reqQuery) {
 const fetchOrders = async (req, res) => {
   try {
     const {
-      search = '',
+      search     = '',
+      fundType   = '',   // new: fund._id or 'all'
       currentPage = 1,
-      pageSize = 10,
+      pageSize    = 10,
     } = req.query;
  
     const page  = Math.max(1, parseInt(currentPage, 10));
     const limit = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
     const skip  = (page - 1) * limit;
  
-    // Base query (status + date range)
+    // Base query (status + date range — your existing buildBaseQuery)
     const baseQuery = buildBaseQuery(req.query);
  
-    // Search across orderId, bankCard.accountNumber, bankCard.accountName
+    // ── Fund type filter ──────────────────────────────────────────
+    // Frontend sends the fund's _id. We filter orders by fund field.
+    if (fundType && fundType !== 'all') {
+      baseQuery.fund = fundType;
+    }
+ 
+    // ── Search ────────────────────────────────────────────────────
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i');
       baseQuery.$or = [
@@ -55,26 +62,25 @@ const fetchOrders = async (req, res) => {
  
       orderModel
         .find(baseQuery)
-        .populate({ path: 'fund userId', select: 'type rate teleChannel email status' })
+        .populate({ path: 'fund userId', select: 'type rate teleChannel email status code fundType' })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
  
-      // Total completed (success) fiat amount for the current filter
-      // orderModel.aggregate([
-      //   { $match: { ...baseQuery, status: 'success' } },
-      //   { $group: { _id: null, total: { $sum: '$fiat' } } },
-      // ]),
+      orderModel.aggregate([
+        { $match: { ...baseQuery, status: 'success' } },
+        { $group: { _id: null, total: { $sum: '$fiat' } } },
+      ]),
     ]);
  
-    // const totalCompletedAmount = completedAgg[0]?.total || 0;
+    const totalCompletedAmount = completedAgg[0]?.total || 0;
  
     return res.status(200).json({
       success: true,
       orders,
       total,
       currentPage: page,
-      // totalCompletedAmount,
+      totalCompletedAmount,
     });
   } catch (error) {
     console.error('fetchOrders error:', error);

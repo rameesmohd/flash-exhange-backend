@@ -8,15 +8,12 @@ cron.schedule("* * * * *", () => {
     const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
 
     try {
-      // console.log("Checking deposits older than:", twentyMinutesAgo.toISOString());
-
       const expiredDeposits = await depositModel.find({
         status: "pending",
         updatedAt : { $lte: twentyMinutesAgo }
       }).select("_id recieveAddress").lean();
 
       if (expiredDeposits.length === 0) {
-        // console.log("❌ Zero expired deposits");
         return;
       }
 
@@ -34,7 +31,6 @@ cron.schedule("* * * * *", () => {
         )
       ]);
 
-      // console.log(`✅ Marked ${ids.length} deposits as failed and unlocked addresses.`);
     } catch (err) {
       console.error("❌ Cron error:", err);
     }

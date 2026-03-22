@@ -266,21 +266,43 @@ const addBankCard=async(req,res)=>{
   }
 }
 
-const fetchBankCards=async(req,res)=>{
+const fetchBankCards = async (req, res) => {
   try {
-    const user = req.user
-    const { mode } = req.query
-    const bankCards = await bankCardModel.find({ 
-        userId :user._id,
-        ...(mode=="null" ? {} :{mode})
-      },
-    )
-    return res.status(200).json({success: true,bankCards})
+    const user = req.user;
+    const { mode, page = 1, limit = 10 } = req.query;
+
+    const parsedPage  = Math.max(1, parseInt(page,  10));
+    const parsedLimit = Math.min(50, Math.max(1, parseInt(limit, 10)));
+    const skip        = (parsedPage - 1) * parsedLimit;
+
+    const query = {
+      userId: user._id,
+      ...(mode && mode !== 'null' ? { mode } : {}),
+    };
+
+    const [bankCards, total] = await Promise.all([
+      bankCardModel
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .lean(),
+      bankCardModel.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      success:  true,
+      bankCards,
+      total,
+      page:     parsedPage,
+      limit:    parsedLimit,
+      hasMore:  skip + bankCards.length < total,
+    });
   } catch (error) {
-    console.log(error);
-    return res.status(400).json({success: false, message: "Server error" });
+    console.error(error);
+    return res.status(400).json({ success: false, message: 'Server error' });
   }
-}
+};
 
 const deleteBankCard = async (req, res) => {
   try {

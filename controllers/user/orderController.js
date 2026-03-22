@@ -9,17 +9,35 @@ const adminModel = require('../../model/admin')
 const { validateTransPass } = require('./userController')
 const { default: axios } = require('axios')
 
-const fetchFunds=async(req,res)=>{
-    try {   
-        const funds = await fundModel.find({status : "active"})
-        const otherExchangeRates = await adminModel.findOne({},{otherExchangeRates:1})
-        
-        return res.status(200).json({success: true, funds:funds ,otherExchangeRates: otherExchangeRates.otherExchangeRates})
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({success : false,message : "Server error"})
-    }
-}
+const fetchFunds = async (req, res) => {
+  try {
+    const userEmail = req.userEmail;
+
+    const [funds, adminDoc] = await Promise.all([
+      fundModel
+        .find({
+          status: 'active',
+          $or: [
+            { allowedUsers: { $size: 0 } },
+            { allowedUsers: userEmail },
+          ],
+        })
+        .select('-teleApi -password -transactionPass')
+        .sort({ sortOrder: 1 }),               // ← added
+
+      adminModel.findOne({}, { otherExchangeRates: 1 }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      funds,
+      otherExchangeRates: adminDoc?.otherExchangeRates || [],
+    });
+  } catch (error) {
+    console.error('fetchFunds error:', error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 const generateUniqueWithdrawTransactionId = async () => {
     let unique = false;
@@ -235,21 +253,41 @@ const createOrder = async (req, res) => {
   }
 };
 
-const fetchOrders=async(req,res)=>{
-    try {
-        const user = req.user
-        const orders = await orderModel
-        .find({userId : user._id})
-        .populate("fund") 
-        .select("-teleApi -teleChannel")
-        .sort({createdAt : -1})
+const fetchOrders = async (req, res) => {
+  try {
+    const user  = req.user;
+    const { page = 1, limit = 10 } = req.query;
 
-        res.status(200).json({success: true,orders})
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({success : false,message : "Server error"})
-    }
-}
+    const parsedPage  = Math.max(1, parseInt(page,  10));
+    const parsedLimit = Math.min(50, Math.max(1, parseInt(limit, 10)));
+    const skip        = (parsedPage - 1) * parsedLimit;
+
+    const query = { userId: user._id };
+
+    const [orders, total] = await Promise.all([
+      orderModel
+        .find(query)
+        .populate({ path: 'fund', select: '-teleApi -teleChannel' })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parsedLimit)
+        .lean(),
+      orderModel.countDocuments(query),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      orders,
+      total,
+      page:    parsedPage,
+      limit:   parsedLimit,
+      hasMore: skip + orders.length < total,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
 
 module.exports = {
     fetchFunds,

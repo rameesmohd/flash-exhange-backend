@@ -24,12 +24,18 @@ router.route('/address')
   .get(adminController.fetchCompanyAddress)
   .post(adminController.addCompanyAddress)
   .patch(adminController.updateAddress);
+  
+router.patch(   '/fund/reorder', fundController.reorderFunds );  
 
-router.route('/fund')
-  .get(fundController.fetchFunds)
-  .post(fundController.addFunds)
-  .patch(fundController.updateFund);
-router.patch('/fund/:id/update-status', fundController.updateFundStatus);
+router.route (  '/fund' )
+      .get   (  fundController.fetchFunds )
+      .post  (  fundController.addFunds   )
+      .patch (  fundController.updateFund )
+router.patch (  '/fund/:id/update-status',        fundController.updateFundStatus  );
+router.get   (  '/fund/:id/allowed-users',        fundController.getAllowedUsers   );
+router.post  (  '/fund/:id/allowed-users',        fundController.addAllowedUsers   );
+router.delete(  '/fund/:id/allowed-users',        fundController.removeAllowedUser );
+router.patch (  '/fund/:id/allowed-users/clear',  fundController.clearAllowedUsers );
 
 router.get("/orders/stats",orderController.fetchOrderStats)
 
