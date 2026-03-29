@@ -346,7 +346,7 @@ const sendOTPResetTrans = async(req,res)=>{
         await resend.emails.send({
           from: process.env.NOREPLY_WEBSITE_MAIL,
           to: user.email,
-          subject: 'Email Verification - eValueTrade',
+          subject: 'Email Verification - FsQuickPay',
           html: otpVerification(OTP),
         });
       } catch (emailError) {
@@ -467,7 +467,7 @@ const sendOtpSignIn = async (req, res) => {
         await resend.emails.send({
           from: process.env.NOREPLY_WEBSITE_MAIL,
           to: email,
-          subject: 'Email Verification - eValueTrade',
+          subject: 'Email Verification - FsQuickPay',
           html: otpVerification(OTP),
         });
       } catch (emailError) {
@@ -526,7 +526,7 @@ const sendOtpSignup = async (req, res) => {
         await resend.emails.send({
           from: process.env.NOREPLY_WEBSITE_MAIL,
           to: email,
-          subject: 'Email Verification - eValueTrade',
+          subject: 'Email Verification - FsQuickPay',
           html: otpVerification(OTP),
         });
       } catch (emailError) {
