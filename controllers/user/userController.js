@@ -208,7 +208,7 @@ const addBankCard=async(req,res)=>{
 
     // Helper regex patterns
     const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/; // Example: HDFC0001234
-    const accountNumberRegex = /^\d{9,18}$/;
+    const accountNumberRegex = /^[A-Za-z0-9]{9,18}$/;
     const upiRegex = /^[\w.-]+@[\w.-]+$/;
 
     if (!mode || !["bank", "upi"].includes(mode)) {
