@@ -188,11 +188,11 @@ const handleOrderStatus = async (req, res) => {
 
       // UTR format check — alphanumeric, 6–22 chars (covers NEFT/IMPS/UPI/RTGS)
       const utrClean = String(utr).trim();
-      if (!/^[A-Za-z0-9]{6,22}$/.test(utrClean)) {
+      if (!/^[A-Za-z0-9]{6,42}$/.test(utrClean)) {
         await session.abortTransaction();
         return res.status(400).json({
           success: false,
-          message: 'Invalid UTR format. Must be 6–22 alphanumeric characters.',
+          message: 'Invalid UTR format. Must be 6–42 alphanumeric characters.',
         });
       }
 
