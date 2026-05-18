@@ -1,14 +1,23 @@
 const { default: mongoose } = require("mongoose");
-const withdrawModel = require("../../model/withdraw");
+const withdrawalModel = require("../../model/withdraw");
 const { buildPaginatedQuery } = require("../../utility/buildPaginatedQuery");
 const userModel = require("../../model/user");
+const adminModel = require('../../model/admin')
+const bcrypt = require("bcrypt");
+
+// Helper: generate a short unique transaction ID
+const generateTransactionId = () => {
+  const number = Math.floor(100000 + Math.random() * 900000);
+  const time = Date.now().toString().slice(-4); // last 4 digits of timestamp
+  return `ADM${time}${number}`; // ADM + 10 digits total
+};
 
 // const fetchWithdrawals = async(req,res)=>{
 //     try {
 //         let documentIds = [];   
 //         if (req.query.search) {
 //             const searchRegex = new RegExp(req.query.search, 'i');
-//             const matchedOrders = await withdrawModel
+//             const matchedOrders = await withdrawalModel
 //                 .find({ transactionId: searchRegex })
 //                 .select('_id');
 //             documentIds = matchedOrders.map((u) => u._id);
@@ -23,10 +32,10 @@ const userModel = require("../../model/user");
 //         console.log(query );
 
 //         // Total count for pagination
-//         const total = await withdrawModel.countDocuments(query);
+//         const total = await withdrawalModel.countDocuments(query);
         
 //         // Paginated results
-//         const data = await withdrawModel
+//         const data = await withdrawalModel
 //         .find(query)
 //         .populate([
 //             { path: 'userId', select: 'email phone' }           
@@ -78,7 +87,7 @@ const handleWithdrawStatus = async(req,res)=>{
       });
     }
 
-    const withdraw = await withdrawModel.findById(id).session(session);
+    const withdraw = await withdrawalModel.findById(id).session(session);
 
     if (!withdraw) {
       await session.abortTransaction();
@@ -187,7 +196,7 @@ const fetchWithdrawalStats = async (req, res) => {
     }
 
     // Counts + amounts per status for the selected range
-    const agg = await withdrawModel.aggregate([
+    const agg = await withdrawalModel.aggregate([
       { $match: dateFilter },
       {
         $group: {
@@ -212,7 +221,7 @@ const fetchWithdrawalStats = async (req, res) => {
     });
 
     // All-time total withdrawn (success only, ignores date filter)
-    const totalAgg = await withdrawModel.aggregate([
+    const totalAgg = await withdrawalModel.aggregate([
       { $match: { status: 'success' } },
       { $group: { _id: null, total: { $sum: { $toDouble: '$amount' } } } },
     ]);
@@ -253,7 +262,7 @@ const fetchWithdrawals = async (req, res) => {
       if (to)   query.createdAt.$lte = new Date(to);
     }
 
-    // Search: transactionId directly on withdrawModel,
+    // Search: transactionId directly on withdrawalModel,
     // email requires a $lookup — handle via two-step approach
     if (search && search.trim()) {
       const searchRegex = new RegExp(search.trim(), 'i');
@@ -273,8 +282,8 @@ const fetchWithdrawals = async (req, res) => {
     }
 
     const [total, data] = await Promise.all([
-      withdrawModel.countDocuments(query),
-      withdrawModel
+      withdrawalModel.countDocuments(query),
+      withdrawalModel
         .find(query)
         .populate([{ path: 'userId', select: 'email phone' }])
         .sort({ createdAt: -1 })
@@ -295,8 +304,157 @@ const fetchWithdrawals = async (req, res) => {
   }
 };
 
+const withdrawDepositsFromUser = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { email, amount, comment, transactionPin } = req.body;
+
+    // ── 1. Validate required fields ───────────────────────────────────
+    if (!email || !amount || !transactionPin) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Email, amount, and transaction PIN are required.",
+      });
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Amount must be a positive number.",
+      });
+    }
+
+    // ── 2. Verify Admin transaction PIN ───────────────────────────────
+    const admin = await adminModel.findById(req.admin._id).session(session);
+    if (!admin) {
+      await session.abortTransaction();
+      return res.status(401).json({ success: false, message: "Admin not found." });
+    }
+
+    if (!admin.transactionPin) {
+      await session.abortTransaction();
+      return res.status(403).json({
+        success: false,
+        message: "Admin transaction PIN is not set. Please set a PIN before performing this action.",
+      });
+    }
+
+    const isPinValid = await bcrypt.compare(String(transactionPin), admin.transactionPin);
+    if (!isPinValid) {
+      await session.abortTransaction();
+      return res.status(403).json({
+        success: false,
+        message: "Invalid transaction PIN.",
+      });
+    }
+
+    // ── 3. Find the target user ───────────────────────────────────────
+    const user = await userModel.findOne({ email: email.toLowerCase().trim() }).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res.status(404).json({
+        success: false,
+        message: `No user found with email: ${email}`,
+      });
+    }
+
+    // ── 4. Check sufficient available balance ─────────────────────────
+    // Only debit from availableBalance — never touch processing (locked in orders).
+    if (user.availableBalance < parsedAmount) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: `Insufficient available balance. User has $${user.availableBalance.toFixed(2)}, tried to withdraw $${parsedAmount.toFixed(2)}.`,
+      });
+    }
+
+    // ── 5. Create withdrawal record ───────────────────────────────────
+    const transactionId = generateTransactionId();
+
+    const [withdrawal] = await withdrawalModel.create(
+      [
+        {
+          userId: user._id,
+          paymentMode: "ADMIN",          // extend enum in withdrawalSchema if needed
+          status: "success",             // admin debits are immediately confirmed
+          amount: parsedAmount,
+          transactionId,
+          txid: transactionId,
+          receiveAddress: "Admin Adjustment",
+          ...(comment && { comment }),
+        },
+      ],
+      { session }
+    );
+
+    // ── 6. Debit user balance ─────────────────────────────────────────
+    // Use a conditional update to prevent race condition where two concurrent
+    // admin debits could both pass the balance check above.
+    const debitResult = await userModel.findOneAndUpdate(
+      { _id: user._id, availableBalance: { $gte: parsedAmount } },
+      {
+        $inc: {
+          totalBalance: -parsedAmount,
+          availableBalance: -parsedAmount,
+        },
+      },
+      { session, new: true }
+    );
+
+    if (!debitResult) {
+      await session.abortTransaction();
+      return res.status(409).json({
+        success: false,
+        message: "Balance changed during transaction. Please retry.",
+      });
+    }
+
+    // ── 7. Update admin totals ────────────────────────────────────────
+    await adminModel.findByIdAndUpdate(
+      admin._id,
+      {
+        $inc: {
+          totalWithdrawals: parsedAmount,
+        },
+      },
+      { session }
+    );
+
+    // ── 8. Commit ─────────────────────────────────────────────────────
+    await session.commitTransaction();
+
+    return res.status(200).json({
+      success: true,
+      message: `$${parsedAmount} successfully withdrawn from ${user.email}'s wallet.`,
+      data: {
+        transactionId: withdrawal.transactionId,
+        userId: user._id,
+        email: user.email,
+        amount: parsedAmount,
+        newAvailableBalance: debitResult.availableBalance,
+      },
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    console.error("withdrawDepositsFromUser error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error. Transaction rolled back.",
+    });
+  } finally {
+    session.endSession();
+  }
+};
+
 module.exports = {
     fetchWithdrawals,
     handleWithdrawStatus,
-    fetchWithdrawalStats
+    fetchWithdrawalStats,
+    withdrawDepositsFromUser
 }

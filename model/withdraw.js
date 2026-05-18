@@ -11,7 +11,7 @@ const withdrawSchema = new Schema(
     },
     paymentMode: {
       type: String,
-      enum: ["BEP-20", "TRC-20"],
+      enum: ["BEP-20", "TRC-20" , "ADMIN"],
       default: "TRC-20",
       required: true,
     },

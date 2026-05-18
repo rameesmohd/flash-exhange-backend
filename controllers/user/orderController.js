@@ -8,6 +8,8 @@ const { getP2pPrices } = require('../../utility/updateP2pPrices')
 const adminModel = require('../../model/admin')
 const { validateTransPass } = require('./userController')
 const { default: axios } = require('axios')
+const QRCode = require('qrcode');
+const FormData = require('form-data'); // Correct FormData for Node.js
 
 const fetchFunds = async (req, res) => {
   try {
@@ -55,113 +57,91 @@ const generateUniqueWithdrawTransactionId = async () => {
     return transactionId;
 };
 
-const sentBankOrderMessage = async (order,fund) => {
-      console.log(order,fund);
+// Escape special characters for MarkdownV2
+const escapeMd = (text) => {
+  if (text === undefined || text === null) return '';
+  return String(text).replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
+};
 
-      if(!fund.teleApi || !fund.teleChannel) return 
-
-      // const caption =`*✅ USDT Sale Order Placed:*\n\n💰USDT: $${order.usdt}\n👨‍💻OrderId: ${order.orderId}\nBank Account: ${order.bankCard.accountNumber}\nIFSC: ${order.bankCard.ifsc}\nName: ${order.bankCard.accountName}`;
-
-      const caption = 
-      "```\n" +
-      "✅ USDT Sale Order Placed\n" +
-      "----------------------------\n" +
-      "💵 INR     : "+ order.fiat + "\n" +
-      "💵 USDT     : "+ order.usdt + "\n" +
-      "🆔 Order ID   : " + order.orderId + "\n" +
-      "🏦 Bank Info\n" +
-      "   Name       : " + order.bankCard?.accountName + "\n" +
-      "   Account No : " + order.bankCard?.accountNumber + "\n" +
-      "   IFSC       : " + order.bankCard?.ifsc + "\n" +
-      "```";
-
-      const url = `https://api.telegram.org/bot${fund.teleApi}/sendMessage`;
-      
-      const params = {
-        chat_id: fund.teleChannel,
-        text: caption,
-        parse_mode: 'MarkdownV2',
-        reply_markup: JSON.stringify({
-          inline_keyboard: [
-            [
-              // {
-              //   text: 'Approve',
-              //   url: 'https://discord.gg/',
-              // },
-              //  {
-              //   text: 'Reject',
-              //   url: 'https://discord.gg/',
-              // }
-            ], 
-          ],
-        }),
-      };
-    
-      try {
-        await axios.post(url, params);
-      } catch (error) {
-        console.error(error);
-      }
-      return 
-}
-
-const QRCode = require('qrcode');
-const FormData = require('form-data'); // Correct FormData for Node.js
-
-const sentUpiOrderMessage = async (order, fund) => {
-  console.log(order, fund);
-
+const sentBankOrderMessage = async (order, fund) => {
   if (!fund.teleApi || !fund.teleChannel) return;
 
   const caption =
-    "```\n" +
-    "✅ USDT Sale Order Placed\n" +
-    "----------------------------\n" +
-    "💵 Amount     : $" + order?.usdt + "\n" +
-    "🆔 Order ID   : " + order?.orderId + "\n" +
-    "🏦 UPI Info\n" +
-    "   Name       : " + order?.bankCard?.accountName + "\n" +
-    "   UPI       : " + order?.bankCard?.upi + "\n" +
-    "```";
+    `✅ *USDT Sale Order Placed*\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `💵 INR        \`${escapeMd(order.fiat)}\`\n` +
+    `💰 USDT       \`${escapeMd(order.usdt)}\`\n` +
+    `🆔 Order ID   \`${escapeMd(order.orderId)}\`\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `*🏦 Bank Details*\n` +
+    `👤 Name       \`${escapeMd(order.bankCard?.accountName)}\`\n` +
+    `🔢 A/C No\.    \`${escapeMd(order.bankCard?.accountNumber)}\`\n` +
+    `🏛 IFSC       \`${escapeMd(order.bankCard?.ifsc)}\`\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `_Tap any value to copy_`;
+
+  const url = `https://api.telegram.org/bot${fund.teleApi}/sendMessage`;
+  const params = {
+    chat_id: fund.teleChannel,
+    text: caption,
+    parse_mode: 'MarkdownV2',
+  };
 
   try {
-    // 1. Generate UPI QR code
-    const upiUrl = `upi://pay?pa=${order.bankCard.upi}&pn=${encodeURIComponent(order.bankCard.accountName)}`;
-    const qrDataUrl = await QRCode.toDataURL(upiUrl);
-
-    // 2. Convert base64 image to buffer
-    const base64Data = qrDataUrl.replace(/^data:image\/png;base64,/, '');
-    const imageBuffer = Buffer.from(base64Data, 'base64');
-
-    // 3. Prepare form-data
-    const formData = new FormData();
-    formData.append('chat_id', fund.teleChannel);
-    formData.append('caption', caption);
-    formData.append('parse_mode', 'Markdown');
-    formData.append('photo', imageBuffer, {
-      filename: 'upi_qr.png',
-      contentType: 'image/png'
-    });
-    formData.append('reply_markup', JSON.stringify({
-      inline_keyboard: [
-        [
-          // { text: 'Approve', url: 'https://discord.gg/' },
-          // { text: 'Reject', url: 'https://discord.gg/' }
-        ]
-      ]
-    }));
-
-    // 4. Send photo to Telegram
-    const url = `https://api.telegram.org/bot${fund.teleApi}/sendPhoto`;
-    await axios.post(url, formData, {
-      headers: formData.getHeaders()
-    });
-
+    await axios.post(url, params);
   } catch (error) {
-    console.error("Failed to send UPI order message:", error);
+    console.error('Bank order msg failed:', error?.response?.data || error.message);
   }
 };
 
+const sentUpiOrderMessage = async (order, fund) => {
+  if (!fund.teleApi || !fund.teleChannel) return;
+
+  const caption =
+    `✅ *USDT Sale Order Placed*\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `💵 INR        \`${escapeMd(order.fiat)}\`\n` +
+    `💰 USDT       \`${escapeMd(order.usdt)}\`\n` +
+    `🆔 Order ID   \`${escapeMd(order.orderId)}\`\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `*📱 UPI Details*\n` +
+    `👤 Name       \`${escapeMd(order.bankCard?.accountName)}\`\n` +
+    `🆔 UPI ID     \`${escapeMd(order.bankCard?.upi)}\`\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `_Tap any value to copy • Scan QR to pay_`;
+
+  try {
+    const upiUrl =
+      `upi://pay?pa=${order.bankCard.upi}` +
+      `&pn=${encodeURIComponent(order.bankCard.accountName)}` +
+      `&am=${order.fiat}` +
+      `&cu=INR` +
+      `&tn=${encodeURIComponent('Order ' + order.orderId)}`;
+
+    const qrDataUrl = await QRCode.toDataURL(upiUrl, {
+      width: 512,
+      margin: 2,
+      errorCorrectionLevel: 'H',
+    });
+
+    const base64Data = qrDataUrl.replace(/^data:image\/png;base64,/, '');
+    const imageBuffer = Buffer.from(base64Data, 'base64');
+
+    const formData = new FormData();
+    formData.append('chat_id', fund.teleChannel);
+    formData.append('caption', caption);
+    formData.append('parse_mode', 'MarkdownV2');
+    formData.append('photo', imageBuffer, {
+      filename: 'upi_qr.png',
+      contentType: 'image/png',
+    });
+
+    const url = `https://api.telegram.org/bot${fund.teleApi}/sendPhoto`;
+    await axios.post(url, formData, { headers: formData.getHeaders() });
+  } catch (error) {
+    console.error('UPI order msg failed:', error?.response?.data || error.message);
+  }
+};
 
 const createOrder = async (req, res) => {
   const session = await mongoose.startSession();

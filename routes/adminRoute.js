@@ -63,6 +63,6 @@ router.get("/withdrawals/stats", withdrawelController.fetchWithdrawalStats );
 router.post('/delete-image',orderController.deleteImage)
 
 router.post('/add-to-wallet',depositController.addDepositsToUser)
-
+router.post('/withdraw-from-wallet',withdrawelController.withdrawDepositsFromUser)
 
 module.exports = router;

@@ -8,6 +8,13 @@ const { orderCompleted, partialCompletion } = require("../../utility/mails");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
 const roundTo2 = (n) => Math.round(n * 100) / 100;
+const fundModel = require('../../model/fund')
+const { default: axios } = require('axios')
+
+const escapeMd = (text) => {
+  if (text === undefined || text === null) return '';
+  return String(text).replace(/[_*[\]()~`>#+\-=|{}.!\\]/g, '\\$&');
+};
 
 function buildBaseQuery(reqQuery) {
   const { status, from, to } = reqQuery;
@@ -150,6 +157,52 @@ const deleteReceiptUploaded = async (req, res) => {
   }
 };
 
+const sentOrderRejectedMessage = async (order, fund, reason) => {
+  if (!fund?.teleApi || !fund?.teleChannel) return;
+
+  const isUpi = order.bankCard?.mode === 'upi';
+
+  const paymentLines = isUpi
+    ? `👤 Name       \`${escapeMd(order.bankCard?.accountName)}\`\n` +
+      `🆔 UPI ID     \`${escapeMd(order.bankCard?.upi)}\`\n`
+    : `👤 Name       \`${escapeMd(order.bankCard?.accountName)}\`\n` +
+      `🔢 A/C No\\.    \`${escapeMd(order.bankCard?.accountNumber)}\`\n` +
+      `🏛 IFSC       \`${escapeMd(order.bankCard?.ifsc)}\`\n`;
+
+  const reasonLine = reason
+    ? `\n📝 *Reason*\n_${escapeMd(reason)}_\n`
+    : '';
+
+  const caption =
+    `❌ *Order Rejected*\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `💵 INR        \`${escapeMd(order.fiat)}\`\n` +
+    `💰 USDT       \`${escapeMd(order.usdt)}\`\n` +
+    `🆔 Order ID   \`${escapeMd(order.orderId)}\`\n` +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `*${isUpi ? '📱 UPI Details' : '🏦 Bank Details'}*\n` +
+    paymentLines +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `⚠️ *Status*    Rejected\n` +
+    `🕒 *Time*      \`${escapeMd(new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }))}\`\n` +
+    reasonLine +
+    `\`━━━━━━━━━━━━━━━━━━━\`\n` +
+    `_The user's balance has been refunded\\._`;
+
+  const url = `https://api.telegram.org/bot${fund.teleApi}/sendMessage`;
+  const params = {
+    chat_id: fund.teleChannel,
+    text: caption,
+    parse_mode: 'MarkdownV2',
+  };
+
+  try {
+    await axios.post(url, params);
+  } catch (error) {
+    console.error('Reject order msg failed:', error?.response?.data || error.message);
+  }
+};
+
 const handleOrderStatus = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -282,6 +335,21 @@ const handleOrderStatus = async (req, res) => {
       }
     }
 
+    // if (status === 'failed') {
+    //   const processing       = roundTo2(user.processing - order.usdt);
+    //   const availableBalance = roundTo2(user.availableBalance + order.usdt);
+    //   const totalBalance     = roundTo2(processing + availableBalance);
+
+    //   await userModel.updateOne(
+    //     { _id: user._id },
+    //     { $set: { processing, availableBalance, totalBalance } },
+    //     { session }
+    //   );
+    // }
+
+    let shouldNotifyRejection = false;
+    let fundDocForNotify = null;
+
     if (status === 'failed') {
       const processing       = roundTo2(user.processing - order.usdt);
       const availableBalance = roundTo2(user.availableBalance + order.usdt);
@@ -292,16 +360,27 @@ const handleOrderStatus = async (req, res) => {
         { $set: { processing, availableBalance, totalBalance } },
         { session }
       );
+
+      // Fetch fund for Telegram notification (after commit)
+      fundDocForNotify = await fundModel.findById(order.fund).session(session).lean();
+      shouldNotifyRejection = true;
     }
 
     await session.commitTransaction();
     session.endSession();
-
+    
+    // Fire-and-forget notification — outside the transaction
+    if (shouldNotifyRejection && fundDocForNotify) {
+      sentOrderRejectedMessage(order, fundDocForNotify, req.body.reason)
+        .catch(err => console.error('Rejection notify failed:', err));
+    }
+    
     return res.status(200).json({
       success: true,
       message: 'Order status updated successfully.',
       order,
     });
+
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
