@@ -11,6 +11,9 @@ const referralModel = require('../../model/referrals');
 const notification = require('../../model/notification');
 const { otpVerification } = require('../../utility/mails');
 const resend = new Resend(process.env.RESEND_SECRET_KEY);
+const orderModel = require('../../model/order');
+const depositModel = require('../../model/deposit');
+const withdrawModel = require('../../model/withdraw');
 
 const createToken = (userId) => {
     return jwt.sign({ userId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
@@ -585,6 +588,103 @@ const getNotifications=async(req,res)=>{
   }
 }
 
+const getRecentTransactions = async (req, res) => {
+  try {
+    const userId = req.userId || req.user?._id;
+    const limit = parseInt(req.query.limit, 10) || 5;
+    if (!userId) {
+      return res.status(401).json({ success: false, errMsg: 'Unauthorized user' });
+    }
+    // Fetch the latest records from all 3 collections concurrently
+    const [orders, deposits, withdraws] = await Promise.all([
+      orderModel
+        .find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .populate('fund')
+        .lean(),
+      depositModel
+        .find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean(),
+      withdrawModel
+        .find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .lean(),
+    ]);
+    // 1. Normalize Orders (Exchanges)
+    const formattedOrders = orders.map((order) => {
+      const mode = order.bankCard?.mode === 'bank' ? 'Bank IMPS' : 'UPI';
+      return {
+        _id: order._id,
+        type: 'exchange',
+        title: 'Exchange to INR',
+        subtitle: `${mode} Transfer`,
+        amount: order.usdt,
+        fiatAmount: order.fiat,
+        currency: 'USDT',
+        fiatCurrency: 'INR',
+        status: order.status,
+        direction: 'debit',
+        orderId: order.orderId,
+        paymentMode: order.bankCard?.mode,
+        createdAt: order.createdAt,
+        raw: order,
+      };
+    });
+    // 2. Normalize Deposits
+    const formattedDeposits = deposits.map((deposit) => ({
+      _id: deposit._id,
+      type: 'deposit',
+      title: 'USDT Deposit',
+      subtitle: `${deposit.paymentMode || 'Crypto'} Network`,
+      amount: deposit.amount,
+      currency: 'USDT',
+      status: deposit.status,
+      direction: 'credit',
+      transactionId: deposit.transactionId,
+      paymentMode: deposit.paymentMode,
+      createdAt: deposit.createdAt,
+      raw: deposit,
+    }));
+    // 3. Normalize Withdrawals
+    const formattedWithdraws = withdraws.map((withdraw) => ({
+      _id: withdraw._id,
+      type: 'withdraw',
+      title: 'USDT Withdrawal',
+      subtitle: `${withdraw.paymentMode || 'Crypto'} Network`,
+      amount: withdraw.amount,
+      currency: 'USDT',
+      status: withdraw.status,
+      direction: 'debit',
+      transactionId: withdraw.transactionId,
+      paymentMode: withdraw.paymentMode,
+      createdAt: withdraw.createdAt,
+      raw: withdraw,
+    }));
+    // Merge all transactions and sort descending by timestamp
+    const allTransactions = [
+      ...formattedOrders,
+      ...formattedDeposits,
+      ...formattedWithdraws,
+    ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    // Get the top 5
+    const recentTransactions = allTransactions.slice(0, limit);
+    return res.status(200).json({
+      success: true,
+      transactions: recentTransactions,
+    });
+  } catch (error) {
+    console.error('Error fetching recent transactions:', error);
+    return res.status(500).json({
+      success: false,
+      errMsg: 'Failed to fetch recent transactions',
+    });
+  }
+};
+
 module.exports={
     signup,
     sendOtpSignup,
@@ -602,5 +702,7 @@ module.exports={
 
     getReferrals,
 
-    getNotifications
+    getNotifications,
+
+    getRecentTransactions
 }

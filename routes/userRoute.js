@@ -14,6 +14,7 @@ const {
     getReferrals,
     sendOtpSignIn,
     getNotifications,
+    getRecentTransactions,
 } = require('../controllers/user/userController')
 const { 
     verifyPayment, 
@@ -82,5 +83,7 @@ router.route('/reset-pin')
 router.route('/referrals')
       .get(getReferrals)
 
+router.route('/recent-transactions') 
+      .get(getRecentTransactions)
 
 module.exports=router
