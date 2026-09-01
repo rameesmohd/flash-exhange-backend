@@ -32,11 +32,15 @@ const getRandomDelay = () => {
 };
 
 const insertRandomly = async () => {
-  const data = generateNotificationData();
-  await notificationModel.create(data);
+  try {
+    const data = generateNotificationData();
+    await notificationModel.create(data);
+    // console.log(`✅ Inserted: ${data.phone} sold $${data.amount}`);
+  } catch (error) {
+    console.error("Error creating notification:", error.message);
+  }
 
   const nextDelay = getRandomDelay();
-  // console.log(`✅ Inserted: ${data.phone} sold $${data.amount} | Next in ${Math.floor(nextDelay / 1000)}s`);
   setTimeout(insertRandomly, nextDelay);
 };
 
