@@ -34,10 +34,10 @@ app.use(helmet({
 app.set('trust proxy', 1);
 
 const allowedOrigins = [
-  "https://www.fsquickpay.com",
-  "https://fsquickpay.com",
-  "https://api.fsquickpay.com",
-  "https://admin.fsquickpay.com",
+  "https://www.dollarxtrading.in",
+  "https://dollarxtrading.in",
+  "https://api.dollarxtrading.in",
+  "https://admin.dollarxtrading.in",
   "http://localhost:5173",
   "http://localhost:3001",
   "http://localhost:4173",
