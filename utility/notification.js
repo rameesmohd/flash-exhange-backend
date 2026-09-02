@@ -1,4 +1,5 @@
 const notificationModel = require('../model/notification');
+const APPNAME = process.env.APPNAME || "Flash Exchange";
 
 const generateNotificationData = () => {
   // Weighted array: more chances for '9'

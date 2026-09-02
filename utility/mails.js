@@ -1,7 +1,9 @@
+const APPNAME = process.env.APPNAME || "FsQuickpay";
+
 const partialCompletion = (userName, orderId, credited, total, remaining) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
     <div style="background: #0047ab; color: #fff; padding: 20px;">
-      <h2 style="margin: 0;">FsQuickPay</h2>
+      <h2 style="margin: 0;">${APPNAME}</h2>
     </div>
 
     <div style="padding: 20px;">
@@ -18,12 +20,12 @@ const partialCompletion = (userName, orderId, credited, total, remaining) => `
       <p>Our team is processing the remaining amount and will notify you once it’s fully completed.</p>
 
       <p>If you have any questions, feel free to contact us on Telegram:
-      <a href="https://t.me/fsquickpaysupport" style="color: #0047ab;">@fsquickpaysupport</a></p>
+      <a href="https://t.me/${APPNAME.toLowerCase()}support" style="color: #0047ab;">@${APPNAME.toLowerCase()}support</a></p>
     </div>
 
     <div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 14px; color: #666;">
-      <p>Thank you for trading with <strong>FsQuickPay</strong>.</p>
-      <p>🌐 <a href="https://www.fsquickpay.com" style="color: #0047ab;">www.fsquickpay.com</a></p>
+      <p>Thank you for trading with <strong>${APPNAME}</strong>.</p>
+      <p>🌐 <a href="https://www.${APPNAME.toLowerCase()}.com" style="color: #0047ab;">www.${APPNAME.toLowerCase()}.com</a></p>
     </div>
   </div>
 `;
@@ -32,7 +34,7 @@ const partialCompletion = (userName, orderId, credited, total, remaining) => `
 const orderCompleted = (orderId, totalCredited) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
     <div style="background: #0047ab; color: #fff; padding: 20px;">
-      <h2 style="margin: 0;">FsQuickPay</h2>
+      <h2 style="margin: 0;">${APPNAME}</h2>
     </div>
 
     <div style="padding: 20px;">
@@ -44,14 +46,14 @@ const orderCompleted = (orderId, totalCredited) => `
         <li>✅ <strong>Total Amount Credited:</strong> ₹${totalCredited.toLocaleString()}</li>
       </ul>
 
-      <p>We appreciate your trust in FsQuickPay.</p>
+      <p>We appreciate your trust in ${APPNAME}.</p>
 
-      <p>For any support, reach out to us on Telegram: <a href="https://t.me/fsquickpaysupport" style="color: #0047ab;">@fsquickpaysupport</a></p>
+      <p>For any support, reach out to us on Telegram: <a href="https://t.me/${APPNAME.toLowerCase()}support" style="color: #0047ab;">@${APPNAME.toLowerCase()}support</a></p>
     </div>
 
     <div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 14px; color: #666;">
-      <p>Thank you for trading with <strong>FsQuickPay</strong>.</p>
-      <p>🌐 <a href="https://www.fsquickpay.com" style="color: #0047ab;">www.fsquickpay.com</a></p>
+      <p>Thank you for trading with <strong>${APPNAME}</strong>.</p>
+      <p>🌐 <a href="https://www.${APPNAME.toLowerCase()}.com" style="color: #0047ab;">www.${APPNAME.toLowerCase()}.com</a></p>
     </div>
   </div>
 `;
@@ -59,7 +61,7 @@ const orderCompleted = (orderId, totalCredited) => `
 const otpVerification = (OTP) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
     <div style="background: #0047ab; color: #fff; padding: 20px;">
-      <h2 style="margin: 0;">FsQuickPay</h2>
+      <h2 style="margin: 0;">${APPNAME}</h2>
     </div>
 
     <div style="padding: 20px;">
@@ -74,13 +76,13 @@ const otpVerification = (OTP) => `
       <p>This OTP will expire in <strong>10 minutes</strong>. If you didn’t request this, you can safely ignore this email.</p>
 
       <p>If you have questions, contact us on Telegram:
-        <a href="https://t.me/fsquickpaysupport" style="color: #0047ab;">@fsquickpaysupport</a>
+        <a href="https://t.me/${APPNAME.toLowerCase()}support" style="color: #0047ab;">@${APPNAME.toLowerCase()}support</a>
       </p>
     </div>
 
     <div style="background: #f9f9f9; padding: 20px; text-align: center; font-size: 14px; color: #666;">
-      <p>Thank you for using <strong>FsQuickPay</strong>.</p>
-      <p>🌐 <a href="https://www.fsquickpay.com" style="color: #0047ab;">www.fsquickpay.com</a></p>
+      <p>Thank you for using <strong>${APPNAME}</strong>.</p>
+      <p>🌐 <a href="https://www.${APPNAME.toLowerCase()}.com" style="color: #0047ab;">www.${APPNAME.toLowerCase()}.com</a></p>
     </div>
   </div>
 `;
