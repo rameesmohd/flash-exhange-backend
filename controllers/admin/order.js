@@ -326,7 +326,7 @@ const handleOrderStatus = async (req, res) => {
           // await resend.emails.send({
           //   from: process.env.NOREPLY_WEBSITE_MAIL,
           //   to: user.email,
-          //   subject: `FsQuickPay | Order Completed – Order ID: #${order.orderId}`,
+          //   subject: `Order Completed – Order ID: #${order.orderId}`,
           //   html: orderCompleted(order.orderId, order.fiat),
           // });
         }
@@ -417,7 +417,7 @@ const addPayment = async (req, res) => {
           await resend.emails.send({
             from: process.env.NOREPLY_WEBSITE_MAIL,
             to: user.email,
-            subject: `FsQuickPay | Order Partially Completed – Order ID: #${order.orderId}`,
+            subject: `${process.env.APPNAME} | Order Partially Completed – Order ID: #${order.orderId}`,
             html: partialCompletion(
               user.name || 'Customer',
               order.orderId,
