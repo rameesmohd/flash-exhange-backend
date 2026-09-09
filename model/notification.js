@@ -17,12 +17,11 @@ const notificationSchema = new mongoose.Schema(
     }
   },
   {
-    capped: {
-      size: 10240,  // 10 KB or adjust as needed
-      max: 10,      // Max 10 messages
-    },
     versionKey: false,
   }
 );
+
+// Auto-delete notifications older than 7 days
+notificationSchema.index({ timestamp: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('notification', notificationSchema);
