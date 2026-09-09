@@ -578,8 +578,9 @@ const getReferrals=async(req,res)=>{
 
 const getNotifications=async(req,res)=>{
   try {
+    const user = req.user;
     const notifications = await notification.find().sort({ createdAt: -1 });
-    res.status(200).json({success: true, notifications});
+    res.status(200).json({success: true, notifications,user});
   } catch (error) {
     return res.status(500).json({
       success: false,

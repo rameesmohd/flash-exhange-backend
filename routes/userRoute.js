@@ -32,8 +32,6 @@ const {
     fetchOrders
 } = require('../controllers/user/orderController');
 
-router.get('/notifications',getNotifications)
-
 router.post('/signup',signup)
 router.post('/signin',signin)
 
@@ -45,6 +43,8 @@ router.route('/send-otp')
       .patch(sendOtpSignIn) 
 
 router.use(verifyUser)
+
+router.get('/notifications',getNotifications)
 
 router.get('/auth/verify', (req, res) => {
     console.log("/auth/verify");
