@@ -51,3 +51,4 @@ cron.schedule('0 0,12 * * *', async () => {
   scheduled: true,
   timezone: "UTC"
 });
+// getP2pPrices();

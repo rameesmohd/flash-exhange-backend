@@ -12,7 +12,8 @@ const getP2pPrices = async () => {
         tradeType: 'SELL'
       });
 
-      const binancePrice = parseFloat(binanceRes.data.data?.[0]?.adv?.price-5 || "0");
+      const rawPrice = parseFloat(binanceRes.data.data?.[0]?.adv?.price) || 0;
+      const binancePrice = rawPrice > 0 ? rawPrice - 5 : 0;
       
       const result = await adminModel.updateMany(
         {},
