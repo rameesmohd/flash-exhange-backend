@@ -5,11 +5,11 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 const createEncrypt =async ()=>{
-    const password = '7yW3gM8ss'
+    const password = 'Xx7yW3gM8ss1'
     const hashpassword = await bcrypt.hash(password, 10);
     console.log(hashpassword);
 }
-// console.log(createEncrypt());
+console.log(createEncrypt());
 
 const login = async (req, res) => {
   try {

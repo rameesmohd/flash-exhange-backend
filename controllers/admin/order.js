@@ -312,12 +312,27 @@ const handleOrderStatus = async (req, res) => {
     }
 
     if (status === 'success') {
-      const processing   = roundTo2(user.processing - order.usdt);
-      const totalBalance = roundTo2(processing + user.availableBalance);
+      // ── Partial-fulfillment refund ───────────────────────────────
+      // If fulfilledFiat < order.fiat, the user only consumed a
+      // proportional share of the locked USDT.  The remainder is
+      // credited back to availableBalance.
+      //
+      // Example: fiat=100000, usdt=100, fulfilledFiat=8000
+      //   consumedUsdt = 100 × (8000 / 100000) =  8 USDT  (spent)
+      //   refundUsdt   = 100 - 8                = 92 USDT  (returned)
+      const fulfilledRatio = order.fiat > 0
+        ? Math.min(order.fulfilledFiat / order.fiat, 1)
+        : 1;
+      const consumedUsdt = roundTo2(order.usdt * fulfilledRatio);
+      const refundUsdt   = roundTo2(order.usdt - consumedUsdt);
+
+      const processing      = roundTo2(user.processing - order.usdt);
+      const availableBalance = roundTo2(user.availableBalance + refundUsdt);
+      const totalBalance     = roundTo2(processing + availableBalance);
 
       await userModel.updateOne(
         { _id: user._id },
-        { $set: { processing, totalBalance } },
+        { $set: { processing, availableBalance, totalBalance } },
         { session }
       );
 
