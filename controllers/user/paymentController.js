@@ -104,35 +104,39 @@ const createDeposit = async (req, res) => {
   }
 };
 
-const verifyPayment = async (req, res) => {
-  const session = await mongoose.startSession();
+ const verifyPayment = async (req, res) => {
+   const session = await mongoose.startSession();
 
-  try {
-    session.startTransaction();
+   try {
+     session.startTransaction();
 
-    const { txid, id } = req.body;
-    const user = req.user;
+     const { txid, id } = req.body;
+     const user = req.user;
 
-    if(!txid||!id||!user){
-      return res.status(400).json({success: false,message : "Invalid request"})
-    }
-
-    const deposit = await depositModel
-      .findOne({ _id: id, status: "pending" })
-      .populate('recieveAddress')
-      .session(session);
-
-    if (!deposit) {
+     if(!txid||!id||!user){
       await session.abortTransaction();
-      return res.status(400).json({ success: false, message: "Deposit request not found or already processed." });
-    }
+      session.endSession();
+       return res.status(400).json({success: false,message : "Invalid request"})
+     }
 
-    const alreadyUsed = await depositModel.findOne({ txid }).session(session);
-    if (alreadyUsed) {
-      await session.abortTransaction();
-      return res.status(400).json({ success: false, message: "This transaction ID has already been used." });
-    }
-    
+     const deposit = await depositModel
+       .findOne({ _id: id, status: "pending" })
+       .populate('recieveAddress')
+       .session(session);
+
+     if (!deposit) {
+       await session.abortTransaction();
+      session.endSession();
+       return res.status(400).json({ success: false, message: "Deposit request not found or already processed." });
+     }
+
+     const alreadyUsed = await depositModel.findOne({ txid }).session(session);
+     if (alreadyUsed) {
+       await session.abortTransaction();
+      session.endSession();
+       return res.status(400).json({ success: false, message: "This transaction ID has already been used." });
+     }
+
     const tronWeb = createTronWebInstance(process.env.PRIVATE_KEY);
     const expectedToAddress = deposit.recieveAddress.address;
     const expectedAmount = deposit.amount;
@@ -172,7 +176,7 @@ const verifyPayment = async (req, res) => {
     const isToAddressValid = toAddress === expectedToAddress;
     const isAmountValid = amount === expectedAmount;
 
-    if (isSuccessful && isToAddressValid && isAmountValid) {
+     if (isSuccessful && isToAddressValid && isAmountValid) {
       // Update deposit
       await depositModel.updateOne(
         { _id: id },
@@ -208,30 +212,35 @@ const verifyPayment = async (req, res) => {
         { session }
       );
 
-      await session.commitTransaction();
-      session.endSession();
+       await session.commitTransaction();
+       session.endSession();
 
       return res.status(200).json({
         success: true,
         message: "Deposit verified and credited successfully.",
       });
-    } else {
+     } else {
+       await session.abortTransaction();
+      session.endSession();
+       if (!isToAddressValid) {
+         return res.status(400).json({ success: false, message: "Invalid transaction hash. Please check and resubmit."});
+       }
+       if (amount > 1 && !isAmountValid) {
+         return res.status(400).json({ success: false, message: "Transaction amount mismatch." });
+       }
+       return res.status(400).json({ success: false, message: "Transaction failed or not successful." });
+     }
+   } catch (error) {
+     console.error("verifyPayment error:", error);
+    try {
       await session.abortTransaction();
-      if (!isToAddressValid) {
-        return res.status(400).json({ success: false, message: "Invalid transaction hash. Please check and resubmit."});
-      }
-      if (amount > 1 && !isAmountValid) {
-        return res.status(400).json({ success: false, message: "Transaction amount mismatch." });
-      }
-      return res.status(400).json({ success: false, message: "Transaction failed or not successful." });
-    }
-  } catch (error) {
-    console.error("verifyPayment error:", error);
-    await session.abortTransaction();
-    session.endSession();
+    } catch (_) {}
+    try {
+      session.endSession();
+    } catch (_) {}
     return res.status(500).json({ success: false, message: "An internal server error occurred." });
-  }
-};
+   }
+ };
 
 const cancelDeposit = async (req, res) => {
   try {
