@@ -142,23 +142,44 @@ const createDeposit = async (req, res) => {
     const expectedAmount = deposit.amount;
     const contractAddress = USDT_CONTRACT_ADDRESS;
 
-    const txInfo = await tronWeb.trx.getTransaction(txid);
-    const txReceipt = await tronWeb.trx.getTransactionInfo(txid);
+    // Wrap TronWeb calls in try/catch — they throw if txid isn't indexed yet
+    let txInfo = null;
+    let txReceipt = null;
 
-    if (!txInfo || !txReceipt) {
+    try {
+      txInfo = await tronWeb.trx.getTransaction(txid);
+    } catch (tronErr) {
+      console.error("TronGrid getTransaction error:", tronErr.message || tronErr);
       await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: "Transaction not found. Please check the TXID and try again." });
+    }
+
+    if (!txInfo || !txInfo.raw_data) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: "Transaction not found or not confirmed yet." });
+    }
+
+    // getTransactionInfo may return {} for recent transactions — that's OK
+    try {
+      txReceipt = await tronWeb.trx.getTransactionInfo(txid);
+    } catch (err) {
+      console.error("TronGrid getTransactionInfo error (non-fatal):", err.message || err);
+      txReceipt = {};
     }
 
     const contract = txInfo.raw_data?.contract?.[0];
     if (!contract || contract.type !== "TriggerSmartContract") {
       await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: "Invalid transaction type. Expected smart contract transfer." });
     }
 
     const { value } = contract.parameter;
     if (value.contract_address !== tronWeb.address.toHex(contractAddress)) {
       await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ success: false, message: "Incorrect contract address. Expected USDT transfer." });
     }
 
@@ -171,12 +192,23 @@ const createDeposit = async (req, res) => {
     const amount = parseInt(amountHex, 16) / 1e6;
     console.log(toAddress ,"toAddress");
 
-    
-    const isSuccessful = txReceipt.receipt?.result === "SUCCESS";
-    const isToAddressValid = toAddress === expectedToAddress;
-    const isAmountValid = amount === expectedAmount;
+    // Receipt is REQUIRED to confirm funds actually moved (prevents reverted tx exploit)
+    const hasReceipt = txReceipt && Object.keys(txReceipt).length > 0;
+    if (!hasReceipt) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: "We found your transaction, but it is still processing. Please wait a few more seconds and try again." });
+    }
+    if (txReceipt.receipt?.result !== "SUCCESS") {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ success: false, message: "Transaction failed on the network." });
+    }
 
-     if (isSuccessful && isToAddressValid && isAmountValid) {
+    const isToAddressValid = toAddress === expectedToAddress;
+    const isAmountValid = Math.abs(amount - expectedAmount) < 0.2;
+
+     if (isToAddressValid && isAmountValid) {
       // Update deposit
       await depositModel.updateOne(
         { _id: id },
